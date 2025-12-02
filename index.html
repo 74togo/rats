@@ -49,6 +49,157 @@
         th { background: #0f3460; }
         .highlight { color: #e94560; font-weight: bold; }
         .flex-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+	/* Dialog Overlay */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background: #2a2a2a;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 2px solid #4a4a4a;
+}
+
+.dialog h3 {
+    margin-top: 0;
+    color: #ffd700;
+}
+
+.dialog label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.dialog select,
+.dialog input,
+.dialog textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    background: #1a1a1a;
+    border: 1px solid #4a4a4a;
+    color: #fff;
+    border-radius: 4px;
+}
+
+.dialog textarea {
+    min-height: 80px;
+}
+
+.dialog-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Feature Selection Panel */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.feature-option {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #4a4a4a;
+}
+
+.feature-option.owned {
+    border-color: #4CAF50;
+    background: #1a2a1a;
+}
+
+.feature-option.disabled {
+    opacity: 0.5;
+}
+
+.feature-option strong {
+    color: #ffd700;
+}
+
+.feature-option p {
+    font-size: 0.9em;
+    margin: 5px 0;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #4a4a4a;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.feature-option.owned .badge {
+    background: #4CAF50;
+}
+
+/* Miracle Display */
+.prayers-display {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.domain-display {
+    color: #ffd700;
+    margin-bottom: 10px;
+}
+
+.miracle {
+    border-left: 3px solid #ffd700;
+    padding-left: 10px;
+}
+
+.miracle.custom {
+    border-left-color: #9c27b0;
+}
+
+/* Signature Weapon */
+.signature-weapon {
+    background: linear-gradient(90deg, #2a1a1a, #1a1a1a);
+    border-left: 3px solid #ff5722;
+}
+
+/* Path Descriptions */
+.path-descriptions {
+    margin-top: 10px;
+    font-size: 0.9em;
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.path-descriptions p {
+    margin: 5px 0;
+}
+
+/* Spell List in Dialogs */
+.spell-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 10px 0;
+}
     </style>
 </head>
 <body>
@@ -144,6 +295,9 @@
             <h3>Features & Abilities</h3>
             <div class="item-list" id="features-list"></div>
 
+	    <h3>Feature Selection Panel</h3>
+	    <div class="section" id="feature-selection-panel"></div>
+
             <h3>Character Details</h3>
             <div class="section">
                 <p><strong>Goal:</strong> <span id="display-goal">-</span></p>
@@ -193,7 +347,7 @@
 
             <h3>3. Archetype</h3>
             <select id="create-archetype" onchange="updateArchetypeOptions()">
-                <option value="">Select Archetype...</option>
+                <option value="" selected>Select Archetype...</option>
                 <option value="mage">Mage</option>
                 <option value="disciple">Disciple</option>
                 <option value="vagabond">Vagabond</option>
@@ -675,7 +829,13 @@ const TABLES = {
         "Sling", "Spear", "Staff", "Trident", "Warhammer", "Whip"
     ],
     
-    paths: ["Briarborn", "Shadowjack"],
+    paths: [
+        "Briarborn: tracking, foraging, survival, wilderness, nature",
+        "Fingersmith: tinkering, crafting, picking locks or pockets",
+        "Roofrunner: climbing, leaping, balancing, scaling, crawling",
+        "Shadowjack: moving silently, hiding in the shadows, sneaking",
+        "Truthweaver: convincing, commanding, manipulating, demanding"
+    ],
     
     physicalEffects: [
         "Animating", "Attracting", "Binding", "Blossoming", "Consuming", "Creeping",
@@ -883,215 +1043,437 @@ const TABLES = {
     }
 };
 
-        // ============ CHARACTER STATE ============
-        let character = {
-            name: "",
-            level: 1,
-            xp: 0,
-            str: 0,
-            dex: 0,
-            wil: 0,
-            maxHealth: 6,
-            currentHealth: 6,
-            armor: 6,
-            archetype: "",
-            features: [],
-            weapons: [],
-            items: [],
-            goal: "",
-            relationship: "",
-            background: "",
-            spells: [],
-            essence: 0,
-            maxEssence: 2,
-            prayers: 0,
-            maxPrayers: 3,
-            quintessence: [],
-            implement: "",
-            domain: "",
-            signatureWeapon: "",
-            signatureEnhancements: [],
-            path: "",
-            scars: []
-        };
+// ============ CHARACTER STATE ============
+let character = {
+    name: "",
+    level: 1,
+    xp: 0,
+    str: 0,
+    dex: 0,
+    wil: 0,
+    maxHealth: 6,
+    currentHealth: 6,
+    armor: 6,
+    archetype: "",
+    features: [],
+    weapons: [],
+    items: [],
+    goal: "",
+    relationship: "",
+    background: "",
+    spells: [],
+    essence: 0,
+    maxEssence: 2,
+    prayers: 0,
+    maxPrayers: 3,
+    quintessence: [],
+    implement: "",
+    domain: "",
+    signatureWeapon: "",
+    signatureEnhancements: [],
+    path: "",
+    scars: [],
+    // New properties for archetype features
+    attackBonus: 0,
+    paths: [],
+    miracles: [],
+    customMiracles: [],
+    featureFlags: {
+        augment: false,
+        recall: false,
+        extract: false,
+        shape: false,
+        experiment: false,
+        craft: false,
+        permeable: false,
+        quickened: false,
+        dazzle: false,
+        beacon: false,
+        smite: false,
+        ward: false,
+        enhance: false,
+        reflexes: false,
+        riposte: false,
+        fortitude: false,
+        skirmish: false
+    },
+    experimentSpell: null,
+    keptSpells: [],
+    tempHealth: 0
+};
 
-        let combatLog = [];
-        let rollHistory = [];
+let combatLog = [];
+let rollHistory = [];
+let ritualState = {
+    active: false,
+    step: 0,
+    rolledSpells: [],
+    keptSpells: [],
+    shapeModifier: 0
+};
 
-        // ============ UTILITY FUNCTIONS ============
-        function roll(sides) {
-            return Math.floor(Math.random() * sides) + 1;
-        }
+// ============ ARCHETYPE FEATURE DEFINITIONS ============
+const ARCHETYPE_FEATURES = {
+    mage: [
+        { name: "Widen", desc: "Gain two spells.", action: "widen" },
+        { name: "Deepen", desc: "Gain two essence.", action: "deepen" },
+        { name: "Increase", desc: "Gain one spell and one essence.", action: "increase" },
+        { name: "Infuse", desc: "Roll or choose an Element or Form to add to your Quintessence.", action: "infuse" },
+        { name: "Augment", desc: "After rolling your spells, roll an Effect for each spell.", action: "augment" },
+        { name: "Recall", desc: "You may pick up to two spells to keep before conducting the ritual.", action: "recall" },
+        { name: "Extract", desc: "When you conduct the ritual, you may choose the last spell instead of rolling.", action: "extract" },
+        { name: "Shape", desc: "After each roll for your spells, you may add or subtract 2 before selecting a spell.", action: "shape" },
+        { name: "Experiment", desc: "You create an original spell that you may replace one spell with during the ritual.", action: "experiment" }
+    ],
+    disciple: [
+        { name: "Craft", desc: '"Protection" becomes a shape of your choice.', action: "craft" },
+        { name: "Permeable", desc: '"Protection" can be moved through in a direction of your choice.', action: "permeable" },
+        { name: "Quickened", desc: '"Protection" can be activated when it is not your turn.', action: "quickened" },
+        { name: "Dazzle", desc: '"Light" deals 1d damage to all targets who see it.', action: "dazzle" },
+        { name: "Beacon", desc: '"Light" grants +2 on all danger and attack rolls to the wielder of the imbued object.', action: "beacon" },
+        { name: "Smite", desc: '"Purify" hurts any target for 2d damage.', action: "smite" },
+        { name: "Ward", desc: '"Purify" heals one target near you for an additional 1d damage. Excess healed damage becomes temporary Health until the target rests.', action: "ward" },
+        { name: "Enhance", desc: '"Dominion" has an additional or increased effect.', action: "enhance" },
+        { name: "Expand", desc: "Gain an additional miracle based on your Favored Domain.", action: "expand" }
+    ],
+    vagabond: [
+        { name: "Skirmish", desc: "Gain +1 Attack Bonus. Your Attack Bonus when unarmed is the same as when using a light weapon.", action: "skirmish" },
+        { name: "Fortitude", desc: "Gain +2 Health. When you make a Dying roll, roll 3d and choose two dice.", action: "fortitude" },
+        { name: "Amplify", desc: "Roll or choose an Effect to add to your Signature Weapon.", action: "amplify" },
+        { name: "Evolve", desc: "Roll or choose an Element to add to your Signature Weapon.", action: "evolve" },
+        { name: "Reflexes", desc: "You always go first in initiative.", action: "reflexes" },
+        { name: "Riposte", desc: "Once per round, you may make an immediate attack against a target that dealt damage to you.", action: "riposte" },
+        { name: "Skilled", desc: "Gain a second Path.", action: "skilled" },
+        { name: "Expert", desc: "Gain a third Path.", action: "expert" },
+        { name: "Master", desc: "Gain a fourth Path.", action: "master" }
+    ]
+};
 
-        function rollMultiple(count, sides) {
-            const results = [];
-            for (let i = 0; i < count; i++) {
-                results.push(roll(sides));
+// ============ UTILITY FUNCTIONS ============
+function roll(sides) {
+    return Math.floor(Math.random() * sides) + 1;
+}
+
+function rollMultiple(count, sides) {
+    const results = [];
+    for (let i = 0; i < count; i++) {
+        results.push(roll(sides));
+    }
+    return results;
+}
+
+function pick(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+function showTab(tabId) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+
+// ============ CHARACTER SHEET FUNCTIONS ============
+function updateDisplay() {
+    document.getElementById('display-name').textContent = character.name || '-';
+    document.getElementById('display-level').textContent = character.level;
+    document.getElementById('display-xp').textContent = character.xp;
+    document.getElementById('display-archetype').textContent = character.archetype || '-';
+    document.getElementById('display-str').textContent = (character.str >= 0 ? '+' : '') + character.str;
+    document.getElementById('display-dex').textContent = (character.dex >= 0 ? '+' : '') + character.dex;
+    document.getElementById('display-wil').textContent = (character.wil >= 0 ? '+' : '') + character.wil;
+    document.getElementById('display-armor').textContent = character.armor;
+    document.getElementById('display-essence').textContent = character.essence;
+    document.getElementById('display-max-essence').textContent = character.maxEssence;
+    
+    // Attack Bonus display (if applicable)
+    if (document.getElementById('display-attack-bonus')) {
+        document.getElementById('display-attack-bonus').textContent = character.attackBonus;
+    }
+    
+    // Health bar (including temp health)
+    const totalHealth = character.currentHealth + (character.tempHealth || 0);
+    const healthPercent = Math.max(0, (character.currentHealth / character.maxHealth) * 100);
+    const tempHealthPercent = Math.max(0, ((character.tempHealth || 0) / character.maxHealth) * 100);
+    document.getElementById('health-bar-fill').style.width = healthPercent + '%';
+    
+    let healthText = `${character.currentHealth}/${character.maxHealth}`;
+    if (character.tempHealth > 0) {
+        healthText += ` (+${character.tempHealth} temp)`;
+    }
+    document.getElementById('health-display').textContent = healthText;
+    
+    // Weapons
+    const weaponsList = document.getElementById('weapons-list');
+    weaponsList.innerHTML = character.weapons.map(w => `<div class="item"><span>${w}</span></div>`).join('') || '<p>No weapons</p>';
+    
+    // Signature Weapon display for Vagabond
+    if (character.archetype === 'vagabond' && character.signatureWeapon) {
+        const sigWeaponHtml = `
+            <div class="item signature-weapon">
+                <span><strong>Signature:</strong> ${character.signatureWeapon} 
+                (${character.signatureEnhancements.join(', ')})</span>
+            </div>
+        `;
+        weaponsList.innerHTML = sigWeaponHtml + weaponsList.innerHTML;
+    }
+    
+    // Inventory
+    const inventoryList = document.getElementById('inventory-list');
+    inventoryList.innerHTML = character.items.map((item, i) => `
+        <div class="item">
+            <span>${item.name} (${item.location})</span>
+            <button class="btn-small btn-danger" onclick="removeItem(${i})">×</button>
+        </div>
+    `).join('') || '<p>No items</p>';
+    
+    // Features
+    const featuresList = document.getElementById('features-list');
+    featuresList.innerHTML = character.features.map(f => `<div class="item"><span>${f}</span></div>`).join('') || '<p>No features</p>';
+    
+    // Paths for Vagabond
+    if (character.archetype === 'vagabond' && character.paths.length > 0) {
+        const pathsHtml = character.paths.map(p => `<div class="item"><span>Path: ${p}</span></div>`).join('');
+        featuresList.innerHTML += pathsHtml;
+    }
+    
+    // Details
+    document.getElementById('display-goal').textContent = character.goal || '-';
+    document.getElementById('display-relationship').textContent = character.relationship || '-';
+    document.getElementById('display-background').textContent = character.background || '-';
+    
+    // Scars
+    const scarsList = document.getElementById('scars-list');
+    scarsList.innerHTML = character.scars.map(s => `<div class="item"><span>${s}</span></div>`).join('') || '<p>No scars</p>';
+    
+    // Spells (Mage)
+    const memorizedSpells = document.getElementById('memorized-spells');
+    if (character.archetype === 'mage') {
+        memorizedSpells.innerHTML = character.spells.map((s, i) => `
+            <div class="item">
+                <span><strong>${s.name}:</strong> ${s.desc}${s.effect ? ' [' + s.effect + ']' : ''}</span>
+                <button class="btn-small" onclick="castSpell(${i})">Cast (${character.essence}/${character.maxEssence})</button>
+            </div>
+        `).join('') || '<p>No spells memorized</p>';
+    } else {
+        memorizedSpells.innerHTML = '<p>Not a Mage</p>';
+    }
+    
+    // Quintessence
+    const quintList = document.getElementById('quintessence-list');
+    quintList.innerHTML = character.quintessence.map(q => `<div class="item"><span>${q}</span></div>`).join('') || '<p>No quintessence</p>';
+    
+    // Miracles (Disciple)
+    updateMiraclesDisplay();
+    
+    // Update feature selection panel
+    updateFeatureSelectionPanel();
+}
+
+function updateMiraclesDisplay() {
+    const miraclesContainer = document.getElementById('miracles-list');
+    if (!miraclesContainer) return;
+    
+    if (character.archetype !== 'disciple') {
+        miraclesContainer.innerHTML = '<p>Not a Disciple</p>';
+        return;
+    }
+    
+    let miraclesHtml = `
+        <div class="prayers-display">
+            <strong>Prayers:</strong> ${character.prayers}/${character.maxPrayers}
+            <button class="btn-small" onclick="usePrayer()">Use Prayer</button>
+            <button class="btn-small" onclick="commune()">Commune at Temple</button>
+        </div>
+        <div class="domain-display">
+            <strong>Favored Domain:</strong> ${character.domain}
+        </div>
+        <h4>Miracles:</h4>
+    `;
+    
+    // Base miracles
+    const baseMiracles = [
+        { name: 'Protection', desc: getMiracleDescription('Protection') },
+        { name: 'Light', desc: getMiracleDescription('Light') },
+        { name: 'Purify', desc: getMiracleDescription('Purify') },
+        { name: 'Dominion', desc: getMiracleDescription('Dominion') }
+    ];
+    
+    baseMiracles.forEach(m => {
+        miraclesHtml += `
+            <div class="item miracle">
+                <span><strong>${m.name}:</strong> ${m.desc}</span>
+                <button class="btn-small" onclick="activateMiracle('${m.name}')">${character.prayers > 0 ? 'Activate' : 'No Prayers'}</button>
+            </div>
+        `;
+    });
+    
+    // Custom miracles from Expand
+    character.customMiracles.forEach((m, i) => {
+        miraclesHtml += `
+            <div class="item miracle custom">
+                <span><strong>${m.name}:</strong> ${m.desc}</span>
+                <button class="btn-small" onclick="activateMiracle('custom_${i}')">${character.prayers > 0 ? 'Activate' : 'No Prayers'}</button>
+            </div>
+        `;
+    });
+    
+    miraclesContainer.innerHTML = miraclesHtml;
+}
+
+function getMiracleDescription(miracleName) {
+    const flags = character.featureFlags;
+    
+    switch(miracleName) {
+        case 'Protection':
+            let protDesc = 'A small, flat, immovable, impenetrable barrier wall forms near you.';
+            if (flags.craft) protDesc += ' (Custom Shape)';
+            if (flags.permeable) protDesc += ' (Directional Permeability)';
+            if (flags.quickened) protDesc += ' (Reaction Activation)';
+            return protDesc;
+            
+        case 'Light':
+            let lightDesc = 'Imbue an object with light (long duration) or create a blinding flash (short duration).';
+            if (flags.dazzle) lightDesc += ' Deals 1d damage to all who see the flash.';
+            if (flags.beacon) lightDesc += ' Wielder gains +2 on danger and attack rolls.';
+            return lightDesc;
+            
+        case 'Purify':
+            let purifyDesc = '';
+            if (flags.smite) {
+                purifyDesc = 'Hurt any target near you for 2d damage.';
+            } else {
+                purifyDesc = 'Heal a friendly target near you for 1d or hurt an unholy target for 1d.';
             }
-            return results;
-        }
-
-        function pick(array) {
-            return array[Math.floor(Math.random() * array.length)];
-        }
-
-        function showTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
-
-        // ============ CHARACTER SHEET FUNCTIONS ============
-        function updateDisplay() {
-            document.getElementById('display-name').textContent = character.name || '-';
-            document.getElementById('display-level').textContent = character.level;
-            document.getElementById('display-xp').textContent = character.xp;
-            document.getElementById('display-archetype').textContent = character.archetype || '-';
-            document.getElementById('display-str').textContent = (character.str >= 0 ? '+' : '') + character.str;
-            document.getElementById('display-dex').textContent = (character.dex >= 0 ? '+' : '') + character.dex;
-            document.getElementById('display-wil').textContent = (character.wil >= 0 ? '+' : '') + character.wil;
-            document.getElementById('display-armor').textContent = character.armor;
-            document.getElementById('display-essence').textContent = character.essence;
-            document.getElementById('display-max-essence').textContent = character.maxEssence;
-            
-            // Health bar
-            const healthPercent = Math.max(0, (character.currentHealth / character.maxHealth) * 100);
-            document.getElementById('health-bar-fill').style.width = healthPercent + '%';
-            document.getElementById('health-display').textContent = `${character.currentHealth}/${character.maxHealth}`;
-            
-            // Weapons
-            const weaponsList = document.getElementById('weapons-list');
-            weaponsList.innerHTML = character.weapons.map(w => `<div class="item"><span>${w}</span></div>`).join('') || '<p>No weapons</p>';
-            
-            // Inventory
-            const inventoryList = document.getElementById('inventory-list');
-            inventoryList.innerHTML = character.items.map((item, i) => `
-                <div class="item">
-                    <span>${item.name} (${item.location})</span>
-                    <button class="btn-small btn-danger" onclick="removeItem(${i})">×</button>
-                </div>
-            `).join('') || '<p>No items</p>';
-            
-            // Features
-            const featuresList = document.getElementById('features-list');
-            featuresList.innerHTML = character.features.map(f => `<div class="item"><span>${f}</span></div>`).join('') || '<p>No features</p>';
-            
-            // Details
-            document.getElementById('display-goal').textContent = character.goal || '-';
-            document.getElementById('display-relationship').textContent = character.relationship || '-';
-            document.getElementById('display-background').textContent = character.background || '-';
-            
-            // Scars
-            const scarsList = document.getElementById('scars-list');
-            scarsList.innerHTML = character.scars.map(s => `<div class="item"><span>${s}</span></div>`).join('') || '<p>No scars</p>';
-            
-            // Spells
-            const memorizedSpells = document.getElementById('memorized-spells');
-            memorizedSpells.innerHTML = character.spells.map((s, i) => `
-                <div class="item">
-                    <span><strong>${s.name}:</strong> ${s.desc}</span>
-                    <button class="btn-small" onclick="castSpell(${i})">Cast</button>
-                </div>
-            `).join('') || '<p>No spells memorized</p>';
-            
-            // Quintessence
-            const quintList = document.getElementById('quintessence-list');
-            quintList.innerHTML = character.quintessence.map(q => `<div class="item"><span>${q}</span></div>`).join('') || '<p>No quintessence</p>';
-        }
-
-        function modifyHealth(amount) {
-            character.currentHealth = Math.max(0, Math.min(character.maxHealth, character.currentHealth + amount));
-            if (character.currentHealth === 0) {
-                alert('Character is at 0 HP! Roll for a Scar in the Combat tab.');
+            if (flags.ward) {
+                purifyDesc += ' Heal an additional 1d; excess becomes temporary HP.';
             }
+            return purifyDesc;
+            
+        case 'Dominion':
+            let domDesc = `Effect based on ${character.domain} domain.`;
+            if (flags.enhance) domDesc += ' (Enhanced effect)';
+            return domDesc;
+            
+        default:
+            return 'Unknown miracle.';
+    }
+}
+
+function modifyHealth(amount) {
+    // Handle temp health first when taking damage
+    if (amount < 0 && character.tempHealth > 0) {
+        const damageAbs = Math.abs(amount);
+        if (character.tempHealth >= damageAbs) {
+            character.tempHealth -= damageAbs;
             updateDisplay();
             saveCharacter();
+            logCombat(`Absorbed ${damageAbs} damage with temporary HP. Temp HP remaining: ${character.tempHealth}`);
+            return;
+        } else {
+            const remainingDamage = damageAbs - character.tempHealth;
+            character.tempHealth = 0;
+            amount = -remainingDamage;
         }
+    }
+    
+    character.currentHealth = Math.max(0, Math.min(character.maxHealth, character.currentHealth + amount));
+    if (character.currentHealth === 0) {
+        alert('Character is at 0 HP! Roll for a Scar in the Combat tab.');
+    }
+    updateDisplay();
+    saveCharacter();
+}
 
-        function fullHeal() {
-            character.currentHealth = character.maxHealth;
-            updateDisplay();
-            saveCharacter();
-            logCombat('Full rest - Health restored to maximum');
+function fullHeal() {
+    character.currentHealth = character.maxHealth;
+    character.tempHealth = 0; // Temp health is lost on rest
+    updateDisplay();
+    saveCharacter();
+    logCombat('Full rest - Health restored to maximum, temporary HP lost');
+}
+
+function useMedicine() {
+    const medIdx = character.items.findIndex(i => i.name.toLowerCase().includes('medicine'));
+    if (medIdx === -1) {
+        alert('No medicine in inventory!');
+        return;
+    }
+    modifyHealth(1);
+    character.items.splice(medIdx, 1);
+    updateDisplay();
+    logCombat('Used medicine - Restored 1 HP');
+}
+
+function addItem() {
+    const name = document.getElementById('new-item').value.trim();
+    const location = document.getElementById('item-location').value;
+    if (!name) return;
+    
+    const beltItems = character.items.filter(i => i.location === 'belt').length;
+    const backpackItems = character.items.filter(i => i.location === 'backpack').length;
+    
+    if (location === 'belt' && beltItems >= 2) {
+        alert('Belt can only hold 2 items!');
+        return;
+    }
+    if (location === 'backpack' && backpackItems >= 6) {
+        alert('Backpack can only hold 6 items!');
+        return;
+    }
+    
+    character.items.push({ name, location });
+    document.getElementById('new-item').value = '';
+    updateDisplay();
+    saveCharacter();
+}
+
+function removeItem(index) {
+    character.items.splice(index, 1);
+    updateDisplay();
+    saveCharacter();
+}
+
+function addXP(amount) {
+    character.xp += amount;
+    updateDisplay();
+    saveCharacter();
+}
+
+function checkLevelUp() {
+    const xpThresholds = [0, 2, 6, 12, 20, 30, 42, 56, 72, 90];
+    const ranks = ['Porcelain', 'Copper', 'Silver', 'Gold', 'Platinum', 'Emerald', 'Ruby', 'Sapphire', 'Pearl', 'Diamond'];
+    const featureLevels = [3, 5, 7, 9];
+    
+    let newLevel = 1;
+    for (let i = 0; i < xpThresholds.length; i++) {
+        if (character.xp >= xpThresholds[i]) {
+            newLevel = i + 1;
         }
-
-        function useMedicine() {
-            const medIdx = character.items.findIndex(i => i.name.toLowerCase().includes('medicine'));
-            if (medIdx === -1) {
-                alert('No medicine in inventory!');
-                return;
-            }
-            modifyHealth(1);
-            // Reduce medicine count or remove
-            character.items.splice(medIdx, 1);
-            updateDisplay();
-            logCombat('Used medicine - Restored 1 HP');
+    }
+    
+    if (newLevel > character.level) {
+        const oldLevel = character.level;
+        character.level = newLevel;
+        
+        let gain = newLevel % 2 === 0 ? '+1 to an ability' : '+1 feature';
+        
+        // Check if this is a feature level
+        if (featureLevels.includes(newLevel)) {
+            gain += '\n⭐ Choose an Archetype Feature!';
         }
+        
+        alert(`Level Up! ${oldLevel} → ${newLevel} (${ranks[newLevel-1]})\nYou gain: ${gain}`);
+        
+        character.maxHealth = 6 + character.str;
+    }
+    updateDisplay();
+    saveCharacter();
+}
 
-        function addItem() {
-            const name = document.getElementById('new-item').value.trim();
-            const location = document.getElementById('item-location').value;
-            if (!name) return;
-            
-            // Check capacity
-            const beltItems = character.items.filter(i => i.location === 'belt').length;
-            const backpackItems = character.items.filter(i => i.location === 'backpack').length;
-            
-            if (location === 'belt' && beltItems >= 2) {
-                alert('Belt can only hold 2 items!');
-                return;
-            }
-            if (location === 'backpack' && backpackItems >= 6) {
-                alert('Backpack can only hold 6 items!');
-                return;
-            }
-            
-            character.items.push({ name, location });
-            document.getElementById('new-item').value = '';
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function removeItem(index) {
-            character.items.splice(index, 1);
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function addXP(amount) {
-            character.xp += amount;
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function checkLevelUp() {
-            const xpThresholds = [0, 2, 6, 12, 20, 30, 42, 56, 72, 90];
-            const ranks = ['Porcelain', 'Copper', 'Silver', 'Gold', 'Platinum', 'Emerald', 'Ruby', 'Sapphire', 'Pearl', 'Diamond'];
-            
-            let newLevel = 1;
-            for (let i = 0; i < xpThresholds.length; i++) {
-                if (character.xp >= xpThresholds[i]) {
-                    newLevel = i + 1;
-                }
-            }
-            
-            if (newLevel > character.level) {
-                const oldLevel = character.level;
-                character.level = newLevel;
-                const gain = newLevel % 2 === 0 ? '+1 to an ability' : '+1 feature';
-                alert(`Level Up! ${oldLevel} → ${newLevel} (${ranks[newLevel-1]})\nYou gain: ${gain}`);
-                
-                // Auto-increase max health if STR ability was increased
-                character.maxHealth = 6 + character.str;
-            }
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function populateSelect(selectId, options) {
+function populateSelect(selectId, options) {
     const select = document.getElementById(selectId);
-    select.innerHTML = ''; // Clear any existing options
+    select.innerHTML = '';
     
     options.forEach(item => {
         const option = document.createElement('option');
@@ -1101,615 +1483,1539 @@ const TABLES = {
     });
 }
 
-        // ============ CHARACTER CREATION ============
-        function rollAbilities() {
-            const row = pick(TABLES.abilities);
-            document.getElementById('create-str').value = row.str;
-            document.getElementById('create-dex').value = row.dex;
-            document.getElementById('create-wil').value = row.wil;
-        }
+// ============ FEATURE SELECTION ============
+function updateFeatureSelectionPanel() {
+    const featurePanel = document.getElementById('feature-selection-panel');
+    if (!featurePanel) return;
+    
+    const featureLevels = [3, 5, 7, 9];
+    const earnedFeatures = featureLevels.filter(l => character.level >= l).length;
+    const usedFeatures = countUsedArchetypeFeatures();
+    const availableFeatures = earnedFeatures - usedFeatures;
+    
+    if (availableFeatures <= 0 || !character.archetype) {
+        featurePanel.innerHTML = '<p>No feature slots available.</p>';
+        return;
+    }
+    
+    const features = ARCHETYPE_FEATURES[character.archetype] || [];
+    
+    let html = `
+        <h4>Choose Archetype Feature (${availableFeatures} available)</h4>
+        <div class="feature-grid">
+    `;
+    
+    features.forEach(f => {
+        const isOwned = hasFeature(f.action);
+        const canSelect = !isOwned && canSelectFeature(f.action);
+        
+        html += `
+            <div class="feature-option ${isOwned ? 'owned' : ''} ${!canSelect ? 'disabled' : ''}">
+                <strong>${f.name}</strong>
+                <p>${f.desc}</p>
+                ${isOwned ? '<span class="badge">Owned</span>' : 
+                  canSelect ? `<button onclick="selectFeature('${f.action}')">Select</button>` : 
+                  '<span class="badge">Unavailable</span>'}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    featurePanel.innerHTML = html;
+}
 
-        function randomName(gender) {
-            const firstName = gender === 'male' ? pick(TABLES.maleNames) : pick(TABLES.femaleNames);
-            const surname = Math.random() > 0.5 ? pick(TABLES.lowerSurnames) : pick(TABLES.upperSurnames);
-            document.getElementById('char-name').value = firstName + ' ' + surname;
-        }
+function countUsedArchetypeFeatures() {
+    const featureNames = ARCHETYPE_FEATURES[character.archetype]?.map(f => f.name) || [];
+    return character.features.filter(f => featureNames.some(fn => f.includes(fn))).length;
+}
 
-        function updateArchetypeOptions() {
-            const archetype = document.getElementById('create-archetype').value;
-            const optionsDiv = document.getElementById('archetype-options');
+function hasFeature(action) {
+    return character.featureFlags[action] === true;
+}
+
+function canSelectFeature(action) {
+    // Check prerequisites
+    switch(action) {
+        case 'expert':
+            return hasFeature('skilled');
+        case 'master':
+            return hasFeature('expert');
+        default:
+            return true;
+    }
+}
+
+function selectFeature(action) {
+    const features = ARCHETYPE_FEATURES[character.archetype] || [];
+    const feature = features.find(f => f.action === action);
+    
+    if (!feature) return;
+    
+    // Apply the feature
+    switch(action) {
+        // Mage features
+        case 'widen':
+            character.spells.push(generateRandomSpell());
+            character.spells.push(generateRandomSpell());
+            character.features.push('Widen: +2 spells');
+            break;
             
-            if (!archetype) {
-                optionsDiv.style.display = 'none';
-                return;
+        case 'deepen':
+            character.maxEssence += 2;
+            character.essence += 2;
+            character.features.push('Deepen: +2 max essence');
+            break;
+            
+        case 'increase':
+            character.spells.push(generateRandomSpell());
+            character.maxEssence += 1;
+            character.essence += 1;
+            character.features.push('Increase: +1 spell, +1 essence');
+            break;
+            
+        case 'infuse':
+            showInfuseDialog();
+            return; // Don't complete yet, dialog will handle it
+            
+        case 'augment':
+            character.featureFlags.augment = true;
+            character.features.push('Augment: Roll Effect for each spell');
+            break;
+            
+        case 'recall':
+            character.featureFlags.recall = true;
+            character.features.push('Recall: Keep up to 2 spells during ritual');
+            break;
+            
+        case 'extract':
+            character.featureFlags.extract = true;
+            character.features.push('Extract: Choose last spell in ritual');
+            break;
+            
+        case 'shape':
+            character.featureFlags.shape = true;
+            character.features.push('Shape: ±2 to spell rolls');
+            break;
+            
+        case 'experiment':
+            showExperimentDialog();
+            return;
+            
+        // Disciple features
+        case 'craft':
+            character.featureFlags.craft = true;
+            character.features.push('Craft: Custom Protection shape');
+            break;
+            
+        case 'permeable':
+            character.featureFlags.permeable = true;
+            character.features.push('Permeable: Directional Protection');
+            break;
+            
+        case 'quickened':
+            character.featureFlags.quickened = true;
+            character.features.push('Quickened: Reaction Protection');
+            break;
+            
+        case 'dazzle':
+            character.featureFlags.dazzle = true;
+            character.features.push('Dazzle: Light deals 1d damage');
+            break;
+            
+        case 'beacon':
+            character.featureFlags.beacon = true;
+            character.features.push('Beacon: Light grants +2 to rolls');
+            break;
+            
+        case 'smite':
+            character.featureFlags.smite = true;
+            character.features.push('Smite: Purify deals 2d to any target');
+            break;
+            
+        case 'ward':
+            character.featureFlags.ward = true;
+            character.features.push('Ward: Purify heals extra 1d, excess = temp HP');
+            break;
+            
+        case 'enhance':
+            character.featureFlags.enhance = true;
+            character.features.push('Enhance: Improved Dominion');
+            break;
+            
+        case 'expand':
+            showExpandDialog();
+            return;
+            
+        // Vagabond features
+        case 'skirmish':
+            character.attackBonus += 1;
+            character.featureFlags.skirmish = true;
+            character.features.push('Skirmish: +1 AB, improved unarmed');
+            break;
+            
+        case 'fortitude':
+            character.maxHealth += 2;
+            character.currentHealth += 2;
+            character.featureFlags.fortitude = true;
+            character.features.push('Fortitude: +2 HP, better Dying rolls');
+            break;
+            
+        case 'amplify':
+            showAmplifyDialog();
+            return;
+            
+        case 'evolve':
+            showEvolveDialog();
+            return;
+            
+        case 'reflexes':
+            character.featureFlags.reflexes = true;
+            character.features.push('Reflexes: Always first in initiative');
+            break;
+            
+        case 'riposte':
+            character.featureFlags.riposte = true;
+            character.features.push('Riposte: Counter-attack once/round');
+            break;
+            
+        case 'skilled':
+            showPathDialog('skilled');
+            return;
+            
+        case 'expert':
+            showPathDialog('expert');
+            return;
+            
+        case 'master':
+            showPathDialog('master');
+            return;
+    }
+    
+    character.featureFlags[action] = true;
+    updateDisplay();
+    saveCharacter();
+    alert(`Feature acquired: ${feature.name}`);
+}
+
+// ============ FEATURE DIALOGS ============
+function showInfuseDialog() {
+    const options = [...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms];
+    
+    const dialog = createDialog('Infuse Quintessence', `
+        <p>Choose an Element or Form to add to your Quintessence:</p>
+        <select id="infuse-choice">
+            ${options.map(o => `<option value="${o}">${o}</option>`).join('')}
+        </select>
+        <button onclick="randomizeDialogSelect('infuse-choice', ${JSON.stringify(options).replace(/"/g, '&quot;')})">🎲 Random</button>
+        <div class="dialog-buttons">
+            <button onclick="confirmInfuse()">Confirm</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmInfuse() {
+    const choice = document.getElementById('infuse-choice').value;
+    character.quintessence.push(choice);
+    character.featureFlags.infuse = true;
+    character.features.push(`Infuse: +${choice} Quintessence`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Quintessence expanded with: ${choice}`);
+}
+
+function showExperimentDialog() {
+    const dialog = createDialog('Create Experiment Spell', `
+        <p>Design your original spell that can replace one spell during rituals:</p>
+        <label>Spell Name:</label>
+        <input type="text" id="experiment-name" placeholder="Spell name">
+        <label>Spell Description:</label>
+        <textarea id="experiment-desc" placeholder="Describe the spell effect"></textarea>
+        <div class="dialog-buttons">
+            <button onclick="confirmExperiment()">Create Spell</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmExperiment() {
+    const name = document.getElementById('experiment-name').value.trim();
+    const desc = document.getElementById('experiment-desc').value.trim();
+    
+    if (!name || !desc) {
+        alert('Please provide both a name and description for your spell.');
+        return;
+    }
+    
+    character.experimentSpell = { name, desc };
+    character.featureFlags.experiment = true;
+    character.features.push(`Experiment: ${name}`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Created experiment spell: ${name}`);
+}
+
+function showExpandDialog() {
+    const dialog = createDialog('Expand - Create Domain Miracle', `
+        <p>Create an additional miracle based on your Favored Domain (${character.domain}):</p>
+        <label>Miracle Name:</label>
+        <input type="text" id="expand-name" placeholder="Miracle name">
+        <label>Miracle Effect:</label>
+        <textarea id="expand-desc" placeholder="Describe the miracle effect related to ${character.domain}"></textarea>
+        <div class="dialog-buttons">
+            <button onclick="confirmExpand()">Create Miracle</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmExpand() {
+    const name = document.getElementById('expand-name').value.trim();
+    const desc = document.getElementById('expand-desc').value.trim();
+    
+    if (!name || !desc) {
+        alert('Please provide both a name and description for your miracle.');
+        return;
+    }
+    
+    character.customMiracles.push({ name, desc });
+    character.featureFlags.expand = true;
+    character.features.push(`Expand: ${name} miracle`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Created new miracle: ${name}`);
+}
+
+function showAmplifyDialog() {
+    const options = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
+    
+    const dialog = createDialog('Amplify Signature Weapon', `
+        <p>Choose an Effect to add to your Signature Weapon:</p>
+        <select id="amplify-choice">
+            ${options.map(o => `<option value="${o}">${o}</option>`).join('')}
+        </select>
+        <button onclick="randomizeDialogSelect('amplify-choice', ${JSON.stringify(options).replace(/"/g, '&quot;')})">🎲 Random</button>
+        <div class="dialog-buttons">
+            <button onclick="confirmAmplify()">Confirm</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmAmplify() {
+    const choice = document.getElementById('amplify-choice').value;
+    character.signatureEnhancements.push(choice);
+    character.featureFlags.amplify = true;
+    character.features.push(`Amplify: +${choice} to Signature Weapon`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Added ${choice} to Signature Weapon!`);
+}
+
+function showEvolveDialog() {
+    const options = [...TABLES.physicalElements, ...TABLES.etherealElements];
+    
+    const dialog = createDialog('Evolve Signature Weapon', `
+        <p>Choose an Element to add to your Signature Weapon:</p>
+        <select id="evolve-choice">
+            ${options.map(o => `<option value="${o}">${o}</option>`).join('')}
+        </select>
+        <button onclick="randomizeDialogSelect('evolve-choice', ${JSON.stringify(options).replace(/"/g, '&quot;')})">🎲 Random</button>
+        <div class="dialog-buttons">
+            <button onclick="confirmEvolve()">Confirm</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmEvolve() {
+    const choice = document.getElementById('evolve-choice').value;
+    character.signatureEnhancements.push(choice);
+    character.featureFlags.evolve = true;
+    character.features.push(`Evolve: +${choice} to Signature Weapon`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Added ${choice} to Signature Weapon!`);
+}
+
+function showPathDialog(tier) {
+    const existingPaths = [character.path, ...character.paths];
+    const availablePaths = TABLES.paths.filter(p => !existingPaths.includes(p));
+    
+    const dialog = createDialog(`Select New Path (${tier})`, `
+        <p>Choose a new Path:</p>
+        <select id="path-choice">
+            ${availablePaths.map(p => `<option value="${p}">${p}</option>`).join('')}
+        </select>
+        <button onclick="randomizeDialogSelect('path-choice', ${JSON.stringify(availablePaths).replace(/"/g, '&quot;')})">🎲 Random</button>
+        <div class="dialog-buttons">
+            <button onclick="confirmPath('${tier}')">Confirm</button>
+            <button onclick="closeDialog()">Cancel</button>
+        </div>
+    `);
+}
+
+function confirmPath(tier) {
+    const choice = document.getElementById('path-choice').value;
+    character.paths.push(choice);
+    character.featureFlags[tier] = true;
+    
+    const tierNames = { skilled: 'Skilled', expert: 'Expert', master: 'Master' };
+    // character.features.push(`${tierNames[tier]}: ${choice} Path`);
+    closeDialog();
+    updateDisplay();
+    saveCharacter();
+    alert(`Gained new path: ${choice}`);
+}
+
+function createDialog(title, content) {
+    // Remove existing dialog if present
+    closeDialog();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'dialog-overlay';
+    overlay.className = 'dialog-overlay';
+    overlay.innerHTML = `
+        <div class="dialog">
+            <h3>${title}</h3>
+            ${content}
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function closeDialog() {
+    const dialog = document.getElementById('dialog-overlay');
+    if (dialog) dialog.remove();
+}
+
+function randomizeDialogSelect(selectId, options) {
+    document.getElementById(selectId).value = pick(options);
+}
+
+// ============ DISCIPLE FUNCTIONS ============
+function usePrayer() {
+    if (character.prayers <= 0) {
+        alert('No prayers remaining! Commune at your temple to restore.');
+        return;
+    }
+    character.prayers--;
+    updateDisplay();
+    saveCharacter();
+    logCombat('Used a prayer');
+}
+
+function commune() {
+    if (character.archetype !== 'disciple') {
+        alert('Only Disciples can commune at temples!');
+        return;
+    }
+    
+    character.prayers = character.maxPrayers;
+    updateDisplay();
+    saveCharacter();
+    alert('Communed at temple - Prayers restored!');
+    logCombat('Communed at temple - Prayers restored');
+}
+
+function activateMiracle(miracleName) {
+    if (character.prayers <= 0) {
+        alert('No prayers remaining!');
+        return;
+    }
+    
+    character.prayers--;
+    
+    let effect = '';
+    switch(miracleName) {
+        case 'Protection':
+            effect = 'Protection barrier formed!';
+            if (character.featureFlags.craft) effect += ' (Custom shape)';
+            if (character.featureFlags.permeable) effect += ' (Directional)';
+            break;
+            
+        case 'Light':
+            effect = 'Light manifested!';
+            if (character.featureFlags.dazzle) {
+                const damage = roll(6);
+                effect += ` Dazzle damage: ${damage}`;
             }
+            if (character.featureFlags.beacon) effect += ' (+2 to wielder rolls)';
+            break;
             
-            optionsDiv.style.display = 'block';
-            
-            if (archetype === 'mage') {
-                optionsDiv.innerHTML = `
-                    <h4>Mage Options</h4>
-                    <label>Implement:</label>
-                    <select id="mage-implement">
-                        ${TABLES.implements.map(i => `<option value="${i}">${i}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="document.getElementById('mage-implement').value=pick(TABLES.implements)">🎲</button>
-                    <label>Quintessence (Element or Form):</label>
-                    <select id="mage-quint">
-                        ${[...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms].map(q => `<option value="${q}">${q}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="randomQuintessence()">🎲</button>
-                `;
-            } else if (archetype === 'disciple') {
-                optionsDiv.innerHTML = `
-                    <h4>Disciple Options</h4>
-                    <label>Favored Domain:</label>
-                    <select id="disciple-domain">
-                        ${TABLES.domains.map(d => `<option value="${d}">${d}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="document.getElementById('disciple-domain').value=pick(TABLES.domains)">🎲</button>
-                    <p><strong>Miracles:</strong> Protection, Light, Purify, Dominion</p>
-                `;
-            } else if (archetype === 'vagabond') {
-                optionsDiv.innerHTML = `
-                    <h4>Vagabond Options</h4>
-                    <label>Signature Weapon:</label>
-                    <select id="vagabond-weapon">
-                        ${TABLES.vagabondWeapons.map(w => `<option value="${w}">${w}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="document.getElementById('vagabond-weapon').value=pick(TABLES.vagabondWeapons)">🎲</button>
-                    <label>Enhancement (Effect or Element):</label>
-                    <select id="vagabond-enhance">
-                        ${[...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements].map(e => `<option value="${e}">${e}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="randomEnhancement()">🎲</button>
-                    <label>Path:</label>
-                    <select id="vagabond-path">
-                        ${TABLES.paths.map(p => `<option value="${p}">${p}</option>`).join('')}
-                    </select>
-                    <button class="btn-small" onclick="document.getElementById('vagabond-path').value=pick(TABLES.paths)">🎲</button>
-                `;
-            }
-        }
-
-        function randomQuintessence() {
-            const all = [...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms];
-            document.getElementById('mage-quint').value = pick(all);
-        }
-
-        function randomEnhancement() {
-            const all = [...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements];
-            document.getElementById('vagabond-enhance').value = pick(all);
-        }
-
-        function randomWeaponPackage() {
-            document.getElementById('create-weapons').value = Math.floor(Math.random() * TABLES.weaponPackages.length);
-        }
-
-        function randomTools() {
-            document.getElementById('create-tool1').value = pick(TABLES.tools);
-            document.getElementById('create-tool2').value = pick(TABLES.tools);
-        }
-
-        function randomItems() {
-            document.getElementById('create-item1').value = pick(TABLES.items);
-            document.getElementById('create-item2').value = pick(TABLES.items);
-        }
-
-        function randomGoal() {
-            document.getElementById('create-goal').value = pick(TABLES.goals);
-        }
-
-        function randomRelationship() {
-            document.getElementById('create-relationship').value = pick(TABLES.relationships);
-        }
-
-        function randomBackground() {
-            const bg = pick(TABLES.backgrounds);
-            document.getElementById('create-background').value = bg.name;
-        }
-
-        function createCharacter() {
-            const name = document.getElementById('char-name').value.trim();
-            if (!name) {
-                alert('Please enter a character name!');
-                return;
-            }
-            
-            const str = parseInt(document.getElementById('create-str').value) || 0;
-            const dex = parseInt(document.getElementById('create-dex').value) || 0;
-            const wil = parseInt(document.getElementById('create-wil').value) || 0;
-            const archetype = document.getElementById('create-archetype').value;
-            
-            const weaponPkg = TABLES.weaponPackages[parseInt(document.getElementById('create-weapons').value)];
-            const tool1 = document.getElementById('create-tool1').value;
-            const tool2 = document.getElementById('create-tool2').value;
-            const item1 = document.getElementById('create-item1').value;
-            const item2 = document.getElementById('create-item2').value;
-            const goal = document.getElementById('create-goal').value;
-            const relationship = document.getElementById('create-relationship').value;
-            const background = document.getElementById('create-background').value;
-            
-            character = {
-                name: name,
-                level: 1,
-                xp: 0,
-                str: str,
-                dex: dex,
-                wil: wil,
-                maxHealth: 6 + str,
-                currentHealth: 6 + str,
-                armor: weaponPkg.armor,
-                archetype: archetype,
-                features: [],
-                weapons: [...weaponPkg.items],
-                items: [
-                    { name: tool1, location: 'backpack' },
-                    { name: tool2, location: 'backpack' },
-                    { name: item1, location: 'backpack' },
-                    { name: item2, location: 'backpack' }
-                ],
-                goal: goal,
-                relationship: relationship,
-                background: background,
-                spells: [],
-                essence: 0,
-                maxEssence: 2,
-                prayers: 0,
-                maxPrayers: 3,
-                quintessence: [],
-                implement: '',
-                domain: '',
-                signatureWeapon: '',
-                signatureEnhancements: [],
-                path: '',
-                scars: []
-            };
-            
-            // Add archetype-specific stuff
-            if (archetype === 'mage') {
-                character.implement = document.getElementById('mage-implement')?.value || pick(TABLES.implements);
-                character.quintessence = [document.getElementById('mage-quint')?.value || pick(TABLES.physicalElements)];
-                character.essence = 2;
-                character.features.push(`Implement: ${character.implement}`);
-                character.features.push(`Quintessence: ${character.quintessence.join(', ')}`);
-                // Generate 2 starting spells
-                character.spells = [generateRandomSpell(), generateRandomSpell()];
-            } else if (archetype === 'disciple') {
-                character.domain = document.getElementById('disciple-domain')?.value || pick(TABLES.domains);
-                character.prayers = 3;
-                character.features.push(`Domain: ${character.domain}`);
-                character.features.push('Miracles: Protection, Light, Purify, Dominion');
-            } else if (archetype === 'vagabond') {
-                character.signatureWeapon = document.getElementById('vagabond-weapon')?.value || pick(TABLES.vagabondWeapons);
-                character.signatureEnhancements = [document.getElementById('vagabond-enhance')?.value || pick(TABLES.physicalEffects)];
-                character.path = document.getElementById('vagabond-path')?.value || pick(TABLES.paths);
-                character.features.push(`Signature Weapon: ${character.signatureWeapon} (${character.signatureEnhancements.join(', ')})`);
-                character.features.push(`Path: ${character.path}`);
-            }
-            
-            // Add background items
-            const bgData = TABLES.backgrounds.find(b => b.name === background);
-            if (bgData) {
-                bgData.items.forEach(item => {
-                    character.items.push({ name: item, location: 'backpack' });
-                });
-            }
-            
-            updateDisplay();
-            saveCharacter();
-            showTab('character');
-            alert('Character created successfully!');
-        }
-
-        // ============ SPELLS ============
-        function generateRandomSpell() {
-            const effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
-            const element = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
-            const form = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
-            
-            const name = `${effect} ${element} ${form}`;
-            const desc = `A spell combining ${effect.toLowerCase()} energy with ${element.toLowerCase()} in the shape of a ${form.toLowerCase()}.`;
-            
-            return { name, desc };
-        }
-
-        function generateSpell() {
-            const spell = generateRandomSpell();
-            const resultDiv = document.getElementById('generated-spell');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <h4>${spell.name}</h4>
-                <p>${spell.desc}</p>
-                <button onclick="addSpellToCharacter('${spell.name}', '${spell.desc}')">Add to Memorized Spells</button>
-            `;
-        }
-
-        function generateSpellFromTable() {
-            const d1 = Math.ceil(roll(6) / 2);
-            const d2 = roll(6);
-            const d3 = roll(6);
-            const code = d1 * 100 + d2 * 10 + d3;
-            
-            let spell = TABLES.spells[code];
-            if (!spell) {
-                spell = { name: `Unknown Spell (${code})`, desc: "A mysterious spell lost to time." };
-            }
-            
-            const resultDiv = document.getElementById('generated-spell');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <h4>${spell.name}</h4>
-                <p>Rolled: ${d1}-${d2}-${d3} = ${code}</p>
-                <p>${spell.desc}</p>
-                <button onclick="addSpellToCharacter('${spell.name}', \`${spell.desc}\`)">Add to Memorized Spells</button>
-            `;
-        }
-
-        function addSpellToCharacter(name, desc) {
-            character.spells.push({ name, desc });
-            updateDisplay();
-            saveCharacter();
-            alert('Spell added!');
-        }
-
-        function conductRitual() {
-            if (character.archetype !== 'mage') {
-                alert('Only Mages can conduct rituals!');
-                return;
-            }
-            
-            character.spells = [generateRandomSpell(), generateRandomSpell()];
-            character.essence = character.maxEssence;
-            updateDisplay();
-            saveCharacter();
-            alert('Ritual complete! New spells memorized and essence restored.');
-        }
-
-        function castSpell(index) {
-            if (character.essence <= 0) {
-                alert('No essence remaining! Conduct a ritual to restore.');
-                return;
-            }
-            character.essence--;
-            logCombat(`Cast spell: ${character.spells[index].name}`);
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function modifyEssence(amount) {
-            character.essence = Math.max(0, Math.min(character.maxEssence, character.essence + amount));
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function rollComponent(type) {
-            let result = '';
-            if (type === 'effect') {
-                result = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
-            } else if (type === 'element') {
-                result = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
-            } else if (type === 'form') {
-                result = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
-            }
-            
-            const resultDiv = document.getElementById('component-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `<div class="dice">${type.toUpperCase()}</div><div class="total">${result}</div>`;
-        }
-
-        // ============ COMBAT ============
-        function rollAttack() {
-            const weaponAB = parseInt(document.getElementById('weapon-type').value);
-            const targetArmor = parseInt(document.getElementById('target-armor').value);
-            const hasAdvantage = document.getElementById('has-advantage').checked;
-            
-            let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
-            let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
-            let diceTotal = kept.reduce((a, b) => a + b, 0);
-            let total = diceTotal + weaponAB;
-            
-            let hit = total > targetArmor;
-            let damage = hit ? total - targetArmor : 0;
-            
-            const resultDiv = document.getElementById('attack-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
-                <div class="total">${diceTotal} + ${weaponAB} AB = <strong>${total}</strong> vs Armor ${targetArmor}</div>
-                <div class="${hit ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${hit ? `HIT! ${damage} damage` : 'MISS!'}
-                </div>
-            `;
-            
-            logCombat(`Attack: ${dice.join('+')}${hasAdvantage ? '(adv)' : ''} + ${weaponAB} = ${total} vs ${targetArmor} → ${hit ? damage + ' damage' : 'miss'}`);
-        }
-
-        function calculateDamage() {
-            const incoming = parseInt(document.getElementById('incoming-attack').value);
-            const armor = character.armor;
-            
-            let damage = Math.max(0, incoming - armor);
-            
-            const resultDiv = document.getElementById('damage-result');
-            resultDiv.style.display = 'block';
-            
-            if (damage > 0) {
-                character.currentHealth -= damage;
-                resultDiv.innerHTML = `
-                    <div class="failure" style="font-size:24px;">
-                        ${incoming} - ${armor} armor = <strong>${damage} damage taken!</strong>
-                    </div>
-                    <div>Current Health: ${character.currentHealth}/${character.maxHealth}</div>
-                `;
-                if (character.currentHealth <= 0) {
-                    resultDiv.innerHTML += `<div class="failure" style="margin-top:10px;">⚠️ AT 0 HP - Roll for Scar!</div>`;
-                }
-                logCombat(`Took ${damage} damage (${incoming} - ${armor} armor). HP: ${character.currentHealth}/${character.maxHealth}`);
+        case 'Purify':
+            if (character.featureFlags.smite) {
+                const damage = roll(6) + roll(6);
+                effect = `Smite! Dealt ${damage} damage`;
             } else {
+                const healing = roll(6);
+                effect = `Purify: ${healing} healing/damage`;
+            }
+            if (character.featureFlags.ward) {
+                const extraHeal = roll(6);
+                effect += ` Ward: +${extraHeal} healing`;
+            }
+            break;
+            
+        case 'Dominion':
+            effect = `Dominion (${character.domain}) activated!`;
+            if (character.featureFlags.enhance) effect += ' (Enhanced)';
+            break;
+            
+        default:
+            if (miracleName.startsWith('custom_')) {
+                const idx = parseInt(miracleName.split('_')[1]);
+                const miracle = character.customMiracles[idx];
+                effect = `${miracle.name} activated!`;
+            }
+    }
+    
+    updateDisplay();
+    saveCharacter();
+    logCombat(`Miracle: ${effect}`);
+    alert(effect);
+}
+
+// ============ MAGE RITUAL SYSTEM ============
+function conductRitual() {
+    if (character.archetype !== 'mage') {
+        alert('Only Mages can conduct rituals!');
+        return;
+    }
+    
+    // Check for Recall feature
+    if (character.featureFlags.recall && character.spells.length > 0) {
+        showRecallDialog();
+    } else {
+        performRitual([]);
+    }
+}
+
+function showRecallDialog() {
+    const spellsHtml = character.spells.map((s, i) => `
+        <div class="spell-option">
+            <label>
+                <input type="checkbox" class="recall-spell" value="${i}">
+                <strong>${s.name}</strong>: ${s.desc}
+            </label>
+        </div>
+    `).join('');
+    
+    createDialog('Recall - Keep Spells', `
+        <p>Select up to 2 spells to keep:</p>
+        <div class="spell-list">${spellsHtml}</div>
+        <div class="dialog-buttons">
+            <button onclick="confirmRecall()">Continue Ritual</button>
+            <button onclick="performRitual([]); closeDialog();">Skip (Keep None)</button>
+        </div>
+    `);
+}
+
+function confirmRecall() {
+    const checked = document.querySelectorAll('.recall-spell:checked');
+    if (checked.length > 2) {
+        alert('You can only keep up to 2 spells!');
+        return;
+    }
+    
+    const keptIndices = Array.from(checked).map(c => parseInt(c.value));
+    const keptSpells = keptIndices.map(i => character.spells[i]);
+    
+    closeDialog();
+    performRitual(keptSpells);
+}
+
+function performRitual(keptSpells) {
+    const spellCount = character.maxEssence; // Spells = max essence by default
+    
+    ritualState = {
+        active: true,
+        step: 0,
+        totalSpells: spellCount,
+        rolledSpells: [...keptSpells],
+        keptSpells: keptSpells
+    };
+    
+    if (character.featureFlags.shape || character.featureFlags.extract) {
+        showRitualStep();
+    } else {
+        // Simple ritual without Shape or Extract
+        const newSpells = [];
+        for (let i = keptSpells.length; i < spellCount; i++) {
+            let spell = generateRandomSpell();
+            if (character.featureFlags.augment) {
+                spell.effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+            }
+            newSpells.push(spell);
+        }
+        
+        character.spells = [...keptSpells, ...newSpells];
+        
+        // Check for Experiment
+        if (character.featureFlags.experiment && character.experimentSpell) {
+            showExperimentReplace();
+        } else {
+            completeRitual();
+        }
+    }
+}
+
+function showRitualStep() {
+    const remaining = ritualState.totalSpells - ritualState.rolledSpells.length;
+    
+    if (remaining <= 0) {
+        character.spells = ritualState.rolledSpells;
+        if (character.featureFlags.experiment && character.experimentSpell) {
+            showExperimentReplace();
+        } else {
+            completeRitual();
+        }
+        return;
+    }
+    
+    // Last spell with Extract
+    const isLastSpell = remaining === 1 && character.featureFlags.extract;
+    
+    if (isLastSpell) {
+        showExtractDialog();
+    } else {
+        showShapeDialog();
+    }
+}
+
+function showShapeDialog() {
+    const d1 = roll(6);
+    const adj_d1 = Math.ceil(d1 / 2);
+    const d2 = roll(6);
+    const d3 = roll(6);
+    
+    if (character.featureFlags.shape) {
+        const d1_options = [d1 - 2, d1, d1 + 2].map(r => Math.ceil(r / 2)).filter(val => val >= 1 && val <= 6);;
+        const d2_options = [d2 - 2, d2, d2 + 2].filter(val => val >= 1 && val <= 6);;
+        const d3_options = [d3 - 2, d3, d3 + 2].filter(val => val >= 1 && val <= 6);;
+        let possibleSpells = [];
+        d1_options.forEach(opt1 => {
+            d2_options.forEach(opt2 => {
+                d3_options.forEach(opt3 => {
+
+                    // Calculate the lookup code
+                    const lookupCode = (opt1 * 100) + (opt2 * 10) + opt3;
+                    const spellEntry = TABLES.spells[lookupCode];
+
+                    // Only add if the spell exists in the table
+                    if (spellEntry) {
+                        possibleSpells.push({
+                            code: lookupCode,
+                            roll: `${opt1}-${opt2}-${opt3}`,
+                            spell: spellEntry // name and desc
+                        });
+                    }
+
+                });
+            });
+        });
+
+        createDialog('Shape Spell', `
+            <p>Rolled: ${d1}, ${d2}, ${d3}</p>
+            <p>Use Shape to adjust each component by ±2:</p>
+            <label>Possible Spells:</label>
+            <select id="shape-spell">
+                ${possibleSpells.map(o => `<option value="${o.code}">(${o.roll}) ${o.spell.name}: ${o.spell.desc}</option>`).join('')}
+            </select>
+            <div class="dialog-buttons">
+                <button onclick="confirmShapeSpell()">Accept Spell</button>
+            </div>
+        `);
+    } else {
+        // No shape, just generate and add
+        const lookupCode = (adj_d1 * 100) + (d2 * 10) + d3;
+        const spell = TABLES.spells[lookupCode];
+        if (character.featureFlags.augment) {
+            const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
+            spell.effect = pick(allEffects);
+        }
+        ritualState.rolledSpells.push(spell);
+        showRitualStep();
+    }
+}
+
+function confirmShapeSpell() {
+    const spellCode = parseInt(document.getElementById('shape-spell').value);
+    
+    const spell = TABLES.spells[spellCode];
+    
+    if (character.featureFlags.augment) {
+        const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
+        spell.effect = pick(allEffects);
+    }
+    
+    ritualState.rolledSpells.push(spell);
+    closeDialog();
+    showRitualStep();
+}
+
+function showExtractDialog() {
+    const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
+    const allElements = [...TABLES.physicalElements, ...TABLES.etherealElements];
+    const allForms = [...TABLES.physicalForms, ...TABLES.etherealForms];
+    
+    createDialog('Extract - Choose Final Spell', `
+        <p>Choose components for your final spell:</p>
+        <label>Effect:</label>
+        <select id="extract-effect">
+            ${allEffects.map((e, i) => `<option value="${i}">${e}</option>`).join('')}
+        </select>
+        <label>Element:</label>
+        <select id="extract-element">
+            ${allElements.map((e, i) => `<option value="${i}">${e}</option>`).join('')}
+        </select>
+        <label>Form:</label>
+        <select id="extract-form">
+            ${allForms.map((f, i) => `<option value="${i}">${f}</option>`).join('')}
+        </select>
+        <div class="dialog-buttons">
+            <button onclick="confirmExtract()">Create Spell</button>
+        </div>
+    `);
+}
+
+function confirmExtract() {
+    const effectIdx = parseInt(document.getElementById('extract-effect').value);
+    const elementIdx = parseInt(document.getElementById('extract-element').value);
+    const formIdx = parseInt(document.getElementById('extract-form').value);
+    
+    const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
+    const allElements = [...TABLES.physicalElements, ...TABLES.etherealElements];
+    const allForms = [...TABLES.physicalForms, ...TABLES.etherealForms];
+    
+    const spell = {
+        name: `${allEffects[effectIdx]} ${allElements[elementIdx]} ${allForms[formIdx]}`,
+        desc: 'An extracted mystical spell.'
+    };
+    
+    if (character.featureFlags.augment) {
+        spell.effect = pick(allEffects);
+    }
+    
+    ritualState.rolledSpells.push(spell);
+    closeDialog();
+    showRitualStep();
+}
+
+function showExperimentReplace() {
+    const spellsHtml = character.spells.map((s, i) => `
+        <div class="spell-option">
+            <label>
+                <input type="radio" name="replace-spell" value="${i}">
+                <strong>${s.name}</strong>: ${s.desc}
+            </label>
+        </div>
+    `).join('');
+    
+    createDialog('Experiment - Replace Spell?', `
+        <p>Replace one spell with your Experiment: <strong>${character.experimentSpell.name}</strong>?</p>
+        <p><em>${character.experimentSpell.desc}</em></p>
+        <div class="spell-list">${spellsHtml}</div>
+        <div class="dialog-buttons">
+            <button onclick="confirmExperimentReplace()">Replace Selected</button>
+            <button onclick="completeRitual(); closeDialog();">Keep All (Skip)</button>
+        </div>
+    `);
+}
+
+function confirmExperimentReplace() {
+    const selected = document.querySelector('input[name="replace-spell"]:checked');
+    if (!selected) {
+        alert('Select a spell to replace or click Skip.');
+        return;
+    }
+    
+    const idx = parseInt(selected.value);
+    character.spells[idx] = { ...character.experimentSpell };
+    closeDialog();
+    completeRitual();
+}
+
+function completeRitual() {
+    character.essence = character.maxEssence;
+    ritualState.active = false;
+    updateDisplay();
+    saveCharacter();
+    alert('Ritual complete! Spells memorized and essence restored.');
+    logCombat('Conducted ritual - spells and essence refreshed');
+}
+
+// ============ CHARACTER CREATION ============
+function rollAbilities() {
+    const row = pick(TABLES.abilities);
+    document.getElementById('create-str').value = row.str;
+    document.getElementById('create-dex').value = row.dex;
+    document.getElementById('create-wil').value = row.wil;
+}
+
+function randomName(gender) {
+    const firstName = gender === 'male' ? pick(TABLES.maleNames) : pick(TABLES.femaleNames);
+    const surname = Math.random() > 0.5 ? pick(TABLES.lowerSurnames) : pick(TABLES.upperSurnames);
+    document.getElementById('char-name').value = firstName + ' ' + surname;
+}
+
+function updateArchetypeOptions() {
+    const archetype = document.getElementById('create-archetype').value;
+    const optionsDiv = document.getElementById('archetype-options');
+    
+    if (!archetype) {
+        optionsDiv.style.display = 'none';
+        return;
+    }
+    
+    optionsDiv.style.display = 'block';
+    
+    if (archetype === 'mage') {
+        optionsDiv.innerHTML = `
+            <h4>Mage Options</h4>
+            <label>Implement:</label>
+            <select id="mage-implement">
+                ${TABLES.implements.map(i => `<option value="${i}">${i}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="document.getElementById('mage-implement').value=pick(TABLES.implements)">🎲</button>
+            <label>Quintessence (Element or Form):</label>
+            <select id="mage-quint">
+                ${[...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms].map(q => `<option value="${q}">${q}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="randomQuintessence()">🎲</button>
+            <p><em>You will start with 2 random spells and 2 essence.</em></p>
+        `;
+    } else if (archetype === 'disciple') {
+        optionsDiv.innerHTML = `
+            <h4>Disciple Options</h4>
+            <label>Favored Domain:</label>
+            <select id="disciple-domain">
+                ${TABLES.domains.map(d => `<option value="${d}">${d}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="document.getElementById('disciple-domain').value=pick(TABLES.domains)">🎲</button>
+            <p><strong>Miracles:</strong> Protection, Light, Purify, Dominion</p>
+            <p><em>You will start with 3 prayers.</em></p>
+        `;
+    } else if (archetype === 'vagabond') {
+        optionsDiv.innerHTML = `
+            <h4>Vagabond Options</h4>
+            <label>Signature Weapon:</label>
+            <select id="vagabond-weapon">
+                ${TABLES.vagabondWeapons.map(w => `<option value="${w}">${w}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="document.getElementById('vagabond-weapon').value=pick(TABLES.vagabondWeapons)">🎲</button>
+            <label>Enhancement (Effect or Element):</label>
+            <select id="vagabond-enhance">
+                ${[...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements].map(e => `<option value="${e}">${e}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="randomEnhancement()">🎲</button>
+            <label>Path:</label>
+            <select id="vagabond-path">
+                ${TABLES.paths.map(p => `<option value="${p}">${p}</option>`).join('')}
+            </select>
+            <button class="btn-small" onclick="document.getElementById('vagabond-path').value=pick(TABLES.paths)">🎲</button>
+            <div class="path-descriptions">
+                <p><strong>Briarborn:</strong> tracking, foraging, survival, wilderness, nature</p>
+                <p><strong>Fingersmith:</strong> tinkering, crafting, picking locks or pockets</p>
+                <p><strong>Roofrunner:</strong> climbing, leaping, balancing, scaling, crawling</p>
+                <p><strong>Shadowjack:</strong> moving silently, hiding in shadows, sneaking</p>
+                <p><strong>Truthweaver:</strong> convincing, commanding, manipulating, demanding</p>
+            </div>
+        `;
+    }
+}
+
+function randomQuintessence() {
+    const all = [...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms];
+    document.getElementById('mage-quint').value = pick(all);
+}
+
+function randomEnhancement() {
+    const all = [...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements];
+    document.getElementById('vagabond-enhance').value = pick(all);
+}
+
+function randomWeaponPackage() {
+    document.getElementById('create-weapons').value = Math.floor(Math.random() * TABLES.weaponPackages.length);
+}
+
+function randomTools() {
+    document.getElementById('create-tool1').value = pick(TABLES.tools);
+    document.getElementById('create-tool2').value = pick(TABLES.tools);
+}
+
+function randomItems() {
+    document.getElementById('create-item1').value = pick(TABLES.items);
+    document.getElementById('create-item2').value = pick(TABLES.items);
+}
+
+function randomGoal() {
+    document.getElementById('create-goal').value = pick(TABLES.goals);
+}
+
+function randomRelationship() {
+    document.getElementById('create-relationship').value = pick(TABLES.relationships);
+}
+
+function randomBackground() {
+    const bg = pick(TABLES.backgrounds);
+    document.getElementById('create-background').value = bg.name;
+}
+
+function createCharacter() {
+    const name = document.getElementById('char-name').value.trim();
+    if (!name) {
+        alert('Please enter a character name!');
+        return;
+    }
+    
+    const str = parseInt(document.getElementById('create-str').value) || 0;
+    const dex = parseInt(document.getElementById('create-dex').value) || 0;
+    const wil = parseInt(document.getElementById('create-wil').value) || 0;
+    const archetype = document.getElementById('create-archetype').value;
+    
+    const weaponPkg = TABLES.weaponPackages[parseInt(document.getElementById('create-weapons').value)];
+    const tool1 = document.getElementById('create-tool1').value;
+    const tool2 = document.getElementById('create-tool2').value;
+    const item1 = document.getElementById('create-item1').value;
+    const item2 = document.getElementById('create-item2').value;
+    const goal = document.getElementById('create-goal').value;
+    const relationship = document.getElementById('create-relationship').value;
+    const background = document.getElementById('create-background').value;
+    
+    character = {
+        name: name,
+        level: 1,
+        xp: 0,
+        str: str,
+        dex: dex,
+        wil: wil,
+        maxHealth: 6 + str,
+        currentHealth: 6 + str,
+        armor: weaponPkg.armor,
+        archetype: archetype,
+        features: [],
+        weapons: [...weaponPkg.items],
+        items: [
+            { name: tool1, location: 'backpack' },
+            { name: tool2, location: 'backpack' },
+            { name: item1, location: 'backpack' },
+            { name: item2, location: 'backpack' }
+        ],
+        goal: goal,
+        relationship: relationship,
+        background: background,
+        spells: [],
+        essence: 0,
+        maxEssence: 2,
+        prayers: 0,
+        maxPrayers: 3,
+        quintessence: [],
+        implement: '',
+        domain: '',
+        signatureWeapon: '',
+        signatureEnhancements: [],
+        path: '',
+        scars: [],
+        attackBonus: 0,
+        paths: [],
+        miracles: [],
+        customMiracles: [],
+        featureFlags: {
+            augment: false,
+            recall: false,
+            extract: false,
+            shape: false,
+            experiment: false,
+            craft: false,
+            permeable: false,
+            quickened: false,
+            dazzle: false,
+            beacon: false,
+            smite: false,
+            ward: false,
+            enhance: false,
+            reflexes: false,
+            riposte: false,
+            fortitude: false,
+            skirmish: false
+        },
+        experimentSpell: null,
+        keptSpells: [],
+        tempHealth: 0
+    };
+    
+    // Add archetype-specific stuff
+    if (archetype === 'mage') {
+        character.implement = document.getElementById('mage-implement')?.value || pick(TABLES.implements);
+        character.quintessence = [document.getElementById('mage-quint')?.value || pick(TABLES.physicalElements)];
+        character.essence = 2;
+        character.maxEssence = 2;
+        character.features.push(`Implement: ${character.implement}`);
+        character.features.push(`Quintessence: ${character.quintessence.join(', ')}`);
+        character.spells = [generateRandomSpell(), generateRandomSpell()];
+    } else if (archetype === 'disciple') {
+        character.domain = document.getElementById('disciple-domain')?.value || pick(TABLES.domains);
+        character.prayers = 3;
+        character.maxPrayers = 3;
+        character.miracles = ['Protection', 'Light', 'Purify', 'Dominion'];
+        character.features.push(`Favored Domain: ${character.domain}`);
+        character.features.push('Miracles: Protection, Light, Purify, Dominion');
+    } else if (archetype === 'vagabond') {
+        character.signatureWeapon = document.getElementById('vagabond-weapon')?.value || pick(TABLES.vagabondWeapons);
+        character.signatureEnhancements = [document.getElementById('vagabond-enhance')?.value || pick(TABLES.physicalEffects)];
+        character.path = document.getElementById('vagabond-path')?.value || pick(TABLES.paths);
+        character.paths = [];
+        character.features.push(`Signature Weapon: ${character.signatureWeapon} (${character.signatureEnhancements.join(', ')})`);
+        character.features.push(`Path: ${character.path}`);
+    }
+    
+    // Add background items
+    const bgData = TABLES.backgrounds.find(b => b.name === background);
+    if (bgData) {
+        bgData.items.forEach(item => {
+            character.items.push({ name: item, location: 'backpack' });
+        });
+    }
+    
+    updateDisplay();
+    saveCharacter();
+    showTab('character');
+    alert('Character created successfully!');
+}
+
+// ============ SPELLS ============
+function generateRandomSpell() {
+    const effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+    const element = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
+    const form = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
+    
+    const name = `${effect} ${element} ${form}`;
+    const desc = `A spell combining ${effect.toLowerCase()} energy with ${element.toLowerCase()} in the shape of a ${form.toLowerCase()}.`;
+    
+    const spell = { name, desc };
+    
+    // If Augment is active, add an effect
+    if (character.featureFlags?.augment) {
+        spell.effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+    }
+    
+    return spell;
+}
+
+function generateSpell() {
+    const spell = generateRandomSpell();
+    const resultDiv = document.getElementById('generated-spell');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <h4>${spell.name}</h4>
+        <p>${spell.desc}</p>
+        ${spell.effect ? `<p><strong>Augmented Effect:</strong> ${spell.effect}</p>` : ''}
+        <button onclick="addSpellToCharacter('${spell.name}', '${spell.desc}', '${spell.effect || ''}')">Add to Memorized Spells</button>
+    `;
+}
+
+function generateSpellFromTable() {
+    const d1 = Math.ceil(roll(6) / 2);
+    const d2 = roll(6);
+    const d3 = roll(6);
+    const code = d1 * 100 + d2 * 10 + d3;
+    
+    let spell = TABLES.spells[code];
+    if (!spell) {
+        spell = { name: `Unknown Spell (${code})`, desc: "A mysterious spell lost to time." };
+    }
+    
+    const resultDiv = document.getElementById('generated-spell');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <h4>${spell.name}</h4>
+        <p>Rolled: ${d1}-${d2}-${d3} = ${code}</p>
+        <p>${spell.desc}</p>
+        <button onclick="addSpellToCharacter('${spell.name}', \`${spell.desc}\`)">Add to Memorized Spells</button>
+    `;
+}
+
+function addSpellToCharacter(name, desc, effect = '') {
+    const spell = { name, desc };
+    if (effect) spell.effect = effect;
+    character.spells.push(spell);
+    updateDisplay();
+    saveCharacter();
+    alert('Spell added!');
+}
+
+function castSpell(index) {
+    if (character.essence <= 0) {
+        alert('No essence remaining! Conduct a ritual to restore.');
+        return;
+    }
+    
+    const spell = character.spells[index];
+    character.essence--;
+    
+    let castMessage = `Cast spell: ${spell.name}`;
+    if (character.quintessence.length > 0) {
+        castMessage += ` (May enhance with: ${character.quintessence.join(', ')})`;
+    }
+    if (spell.effect) {
+        castMessage += ` [Augmented: ${spell.effect}]`;
+    }
+    
+    logCombat(castMessage);
+    updateDisplay();
+    saveCharacter();
+}
+
+function modifyEssence(amount) {
+    character.essence = Math.max(0, Math.min(character.maxEssence, character.essence + amount));
+    updateDisplay();
+    saveCharacter();
+}
+
+function rollComponent(type) {
+    let result = '';
+    if (type === 'effect') {
+        result = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+    } else if (type === 'element') {
+        result = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
+    } else if (type === 'form') {
+        result = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
+    }
+    
+    const resultDiv = document.getElementById('component-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="dice">${type.toUpperCase()}</div><div class="total">${result}</div>`;
+}
+
+// ============ COMBAT ============
+function rollAttack() {
+    const weaponAB = parseInt(document.getElementById('weapon-type').value) + character.attackBonus;
+    const targetArmor = parseInt(document.getElementById('target-armor').value);
+    const hasAdvantage = document.getElementById('has-advantage').checked;
+    
+    let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
+    let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
+    let diceTotal = kept.reduce((a, b) => a + b, 0);
+    let total = diceTotal + weaponAB;
+    
+    let hit = total > targetArmor;
+    let damage = hit ? total - targetArmor : 0;
+    
+    const resultDiv = document.getElementById('attack-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
+        <div class="total">${diceTotal} + ${weaponAB} AB = <strong>${total}</strong> vs Armor ${targetArmor}</div>
+        <div class="${hit ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${hit ? `HIT! ${damage} damage` : 'MISS!'}
+        </div>
+    `;
+    
+    logCombat(`Attack: ${dice.join('+')}${hasAdvantage ? '(adv)' : ''} + ${weaponAB} = ${total} vs ${targetArmor} → ${hit ? damage + ' damage' : 'miss'}`);
+}
+
+function calculateDamage() {
+    const incoming = parseInt(document.getElementById('incoming-attack').value);
+    const armor = character.armor;
+    
+    let damage = Math.max(0, incoming - armor);
+    
+    const resultDiv = document.getElementById('damage-result');
+    resultDiv.style.display = 'block';
+    
+    if (damage > 0) {
+        // Check for temp health first
+        if (character.tempHealth > 0) {
+            if (character.tempHealth >= damage) {
+                character.tempHealth -= damage;
                 resultDiv.innerHTML = `
                     <div class="success" style="font-size:24px;">
-                        Attack blocked! (${incoming} vs ${armor} armor)
+                        Absorbed ${damage} damage with temporary HP!
                     </div>
+                    <div>Temp HP remaining: ${character.tempHealth}</div>
                 `;
-                logCombat(`Blocked attack (${incoming} vs ${armor} armor)`);
-            }
-            
-            updateDisplay();
-            saveCharacter();
-        }
-
-        function rollInitiative() {
-            const dice = rollMultiple(2, 6);
-            const total = dice.reduce((a, b) => a + b, 0) + character.dex;
-            const success = total >= 10;
-            
-            const resultDiv = document.getElementById('initiative-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${dice.join('] [')}]</div>
-                <div class="total">${dice.reduce((a,b)=>a+b,0)} + ${character.dex} DEX = <strong>${total}</strong></div>
-                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${success ? 'Go First!' : 'Go After Enemies'}
-                </div>
-            `;
-            
-            logCombat(`Initiative: ${total} → ${success ? 'Go first' : 'Go after enemies'}`);
-        }
-
-        function rollScar() {
-            const result = roll(6);
-            const scar = TABLES.scars[result - 1];
-            
-            character.scars.push(scar);
-            
-            // Apply scar effects
-            if (result === 2) {
-                // Broken - reduce an ability
-                const abilities = ['str', 'dex', 'wil'];
-                const reduced = pick(abilities);
-                character[reduced]--;
-                alert(`Broken! ${reduced.toUpperCase()} reduced by 1.`);
-            } else if (result === 3) {
-                // Maimed - reduce max health
-                character.maxHealth--;
-                alert('Maimed! Max Health reduced by 1.');
-            } else if (result === 5) {
-                // Twisted - mutation
-                const mutation = pick(TABLES.mutations);
-                character.scars.push(`Mutation: ${mutation}`);
-            } else if (result === 6) {
-                // Splintered - insanity
-                const insanity = pick(TABLES.insanities);
-                character.scars.push(`Insanity: ${insanity}`);
-            }
-            
-            const resultDiv = document.getElementById('scar-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${result}]</div>
-                <div class="failure" style="font-size:18px; margin-top:10px;">${scar}</div>
-            `;
-            
-            updateDisplay();
-            saveCharacter();
-            logCombat(`Scar rolled: ${scar}`);
-        }
-
-        function logCombat(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            combatLog.unshift(`[${timestamp}] ${message}`);
-            if (combatLog.length > 50) combatLog.pop();
-            
-            document.getElementById('combat-log').innerHTML = combatLog.map(l => `<div class="log-entry">${l}</div>`).join('');
-        }
-
-        function clearCombatLog() {
-            combatLog = [];
-            document.getElementById('combat-log').innerHTML = '';
-        }
-
-        // ============ DICE ROLLER ============
-        function quickRoll(count, sides) {
-            const dice = rollMultiple(count, sides);
-            const total = dice.reduce((a, b) => a + b, 0);
-            
-            addToRollHistory(`${count}d${sides}: [${dice.join('] [')}] = ${total}`);
-        }
-
-        function rollDanger() {
-            const ability = document.getElementById('danger-ability').value;
-            const hasAdvantage = document.getElementById('danger-advantage').checked;
-            const abilityValue = character[ability];
-            
-            let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
-            let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
-            let diceTotal = kept.reduce((a, b) => a + b, 0);
-            let total = diceTotal + abilityValue;
-            let success = total >= 10;
-            
-            const resultDiv = document.getElementById('danger-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
-                <div class="total">${diceTotal} + ${abilityValue} ${ability.toUpperCase()} = <strong>${total}</strong></div>
-                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${success ? 'SUCCESS!' : 'FAILURE!'}
-                </div>
-            `;
-            
-            addToRollHistory(`Danger (${ability.toUpperCase()}): ${total} → ${success ? 'Success' : 'Failure'}`);
-        }
-
-        function rollOpposed() {
-            const yourBonus = parseInt(document.getElementById('opposed-your-bonus').value) || 0;
-            const oppBonus = parseInt(document.getElementById('opposed-opp-bonus').value) || 0;
-            
-            const yourDice = rollMultiple(2, 6);
-            const oppDice = rollMultiple(2, 6);
-            const yourTotal = yourDice.reduce((a,b) => a+b, 0) + yourBonus;
-            const oppTotal = oppDice.reduce((a,b) => a+b, 0) + oppBonus;
-            
-            // Defender wins ties
-            const youWin = yourTotal > oppTotal;
-            
-            const resultDiv = document.getElementById('opposed-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div>You: [${yourDice.join('] [')}] + ${yourBonus} = <strong>${yourTotal}</strong></div>
-                <div>Opponent: [${oppDice.join('] [')}] + ${oppBonus} = <strong>${oppTotal}</strong></div>
-                <div class="${youWin ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${youWin ? 'You Win!' : 'Opponent Wins!'}
-                </div>
-            `;
-            
-            addToRollHistory(`Opposed: ${yourTotal} vs ${oppTotal} → ${youWin ? 'You win' : 'Opponent wins'}`);
-        }
-
-        function rollBarter() {
-            const quality = parseInt(document.getElementById('barter-quality').value) || 0;
-            const dice = rollMultiple(2, 6);
-            const total = dice.reduce((a,b) => a+b, 0) + character.wil;
-            const success = total >= 10;
-            const resultQuality = success ? quality : Math.max(0, quality - 1);
-            
-            const resultDiv = document.getElementById('barter-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${dice.join('] [')}]</div>
-                <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${character.wil} WIL = <strong>${total}</strong></div>
-                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${success ? `Equal Trade! (Quality ${resultQuality})` : `Lower Quality Trade (Quality ${resultQuality})`}
-                </div>
-            `;
-            
-            addToRollHistory(`Barter: ${total} → Quality ${resultQuality} item`);
-        }
-
-        function addToRollHistory(message) {
-            rollHistory.unshift(message);
-            if (rollHistory.length > 20) rollHistory.pop();
-            document.getElementById('roll-history').innerHTML = rollHistory.map(r => `<div class="item"><span>${r}</span></div>`).join('');
-        }
-
-        function clearRollHistory() {
-            rollHistory = [];
-            document.getElementById('roll-history').innerHTML = '';
-        }
-
-        // ============ EXPLORATION ============
-        function rollHazard() {
-            const result = roll(6);
-            const hazard = TABLES.hazards[result - 1];
-            
-            const resultDiv = document.getElementById('hazard-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${result}]</div>
-                <div style="font-size:20px; margin-top:10px;"><strong>${hazard.name}</strong></div>
-                <div>${hazard.desc}</div>
-            `;
-        }
-
-        function rollMorale() {
-            const npcWil = parseInt(document.getElementById('morale-wil').value) || 0;
-            const dice = rollMultiple(2, 6);
-            const total = dice.reduce((a,b) => a+b, 0) + npcWil;
-            const success = total >= 10;
-            
-            const resultDiv = document.getElementById('morale-result');
-            resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `
-                <div class="dice">[${dice.join('] [')}]</div>
-                <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${npcWil} WIL = <strong>${total}</strong></div>
-                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
-                    ${success ? 'NPC Holds!' : 'NPC Routs/Begs for Mercy!'}
-                </div>
-            `;
-        }
-
-        function awardSessionXP() {
-            const checks = document.querySelectorAll('.xp-check:checked');
-            const xp = checks.length;
-            if (xp > 0) {
-                addXP(xp);
-                alert(`Awarded ${xp} XP!`);
-                checks.forEach(c => c.checked = false);
+                logCombat(`Absorbed ${damage} damage with temp HP. Temp HP: ${character.tempHealth}`);
+                updateDisplay();
+                saveCharacter();
+                return;
             } else {
-                alert('No XP to award - check the boxes for "yes" answers first!');
+                const absorbed = character.tempHealth;
+                damage -= character.tempHealth;
+                character.tempHealth = 0;
+                resultDiv.innerHTML += `<div>Temp HP absorbed ${absorbed} damage.</div>`;
             }
         }
-
-        // ============ SAVE/LOAD ============
-        function saveCharacter() {
-            localStorage.setItem('islandRatsCharacter', JSON.stringify(character));
+        
+        character.currentHealth -= damage;
+        resultDiv.innerHTML = `
+            <div class="failure" style="font-size:24px;">
+                ${incoming} - ${armor} armor = <strong>${damage} damage taken!</strong>
+            </div>
+            <div>Current Health: ${character.currentHealth}/${character.maxHealth}</div>
+        `;
+        
+        // Check for Riposte
+        if (character.featureFlags.riposte) {
+            resultDiv.innerHTML += `<div class="riposte-prompt"><button onclick="useRiposte()">⚔️ Use Riposte!</button></div>`;
         }
+        
+        if (character.currentHealth <= 0) {
+            resultDiv.innerHTML += `<div class="failure" style="margin-top:10px;">⚠️ AT 0 HP - Roll for Scar!</div>`;
+        }
+        logCombat(`Took ${damage} damage (${incoming} - ${armor} armor). HP: ${character.currentHealth}/${character.maxHealth}`);
+    } else {
+        resultDiv.innerHTML = `
+            <div class="success" style="font-size:24px;">
+                Attack blocked! (${incoming} vs ${armor} armor)
+            </div>
+        `;
+        logCombat(`Blocked attack (${incoming} vs ${armor} armor)`);
+    }
+    
+    updateDisplay();
+    saveCharacter();
+}
 
-        function loadCharacter() {
-            const saved = localStorage.getItem('islandRatsCharacter');
-            if (saved) {
-                character = JSON.parse(saved);
-                updateDisplay();
+function useRiposte() {
+    logCombat('⚔️ RIPOSTE! Making immediate counter-attack!');
+    alert('Riposte activated! Make your counter-attack now.');
+}
+
+function rollInitiative() {
+    // Check for Reflexes feature
+    if (character.featureFlags.reflexes) {
+        const resultDiv = document.getElementById('initiative-result');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+            <div class="success" style="font-size:24px;">
+                <strong>REFLEXES:</strong> You always go first!
+            </div>
+        `;
+        logCombat('Initiative: Reflexes feature - Always first!');
+        return;
+    }
+    
+    const dice = rollMultiple(2, 6);
+    const total = dice.reduce((a, b) => a + b, 0) + character.dex;
+    const success = total >= 10;
+    
+    const resultDiv = document.getElementById('initiative-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${dice.join('] [')}]</div>
+        <div class="total">${dice.reduce((a,b)=>a+b,0)} + ${character.dex} DEX = <strong>${total}</strong></div>
+        <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${success ? 'Go First!' : 'Go After Enemies'}
+        </div>
+    `;
+    
+    logCombat(`Initiative: ${total} → ${success ? 'Go first' : 'Go after enemies'}`);
+}
+
+function rollScar() {
+    // Check for Fortitude feature
+    let dice, result;
+    if (character.featureFlags.fortitude) {
+        dice = rollMultiple(3, 6);
+        // Player chooses, for now we'll just show them all
+        const resultDiv = document.getElementById('scar-result');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+            <div class="dice">[${dice.join('] [')}] (Fortitude: choose 2)</div>
+            <p>Select which dice to keep:</p>
+            ${dice.map((d, i) => `<button onclick="applyScarResult([${dice.filter((_, j) => j !== i).join(',')}])">${dice.filter((_, j) => j !== i).join(' + ')}</button>`).join(' ')}
+        `;
+        return;
+    }
+    
+    result = roll(6);
+    applyScarResult([result]);
+}
+
+function applyScarResult(diceKept) {
+    const total = diceKept.reduce((a, b) => a + b, 0);
+    const result = Math.min(6, Math.max(1, Math.floor(total / diceKept.length))); // Average for display
+    const scar = TABLES.scars[result - 1];
+    
+    character.scars.push(scar);
+    
+    // Apply scar effects
+    if (result === 2) {
+        const abilities = ['str', 'dex', 'wil'];
+        const reduced = pick(abilities);
+        character[reduced]--;
+        alert(`Broken! ${reduced.toUpperCase()} reduced by 1.`);
+    } else if (result === 3) {
+        character.maxHealth--;
+        alert('Maimed! Max Health reduced by 1.');
+    } else if (result === 5) {
+        const mutation = pick(TABLES.mutations);
+        character.scars.push(`Mutation: ${mutation}`);
+    } else if (result === 6) {
+        const insanity = pick(TABLES.insanities);
+        character.scars.push(`Insanity: ${insanity}`);
+    }
+    
+    const resultDiv = document.getElementById('scar-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${diceKept.join('] [')}]</div>
+        <div class="failure" style="font-size:18px; margin-top:10px;">${scar}</div>
+    `;
+    
+    updateDisplay();
+    saveCharacter();
+    logCombat(`Scar rolled: ${scar}`);
+}
+
+function logCombat(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    combatLog.unshift(`[${timestamp}] ${message}`);
+    if (combatLog.length > 50) combatLog.pop();
+    
+    document.getElementById('combat-log').innerHTML = combatLog.map(l => `<div class="log-entry">${l}</div>`).join('');
+}
+
+function clearCombatLog() {
+    combatLog = [];
+    document.getElementById('combat-log').innerHTML = '';
+}
+
+// ============ DICE ROLLER ============
+function quickRoll(count, sides) {
+    const dice = rollMultiple(count, sides);
+    const total = dice.reduce((a, b) => a + b, 0);
+    
+    addToRollHistory(`${count}d${sides}: [${dice.join('] [')}] = ${total}`);
+}
+
+function rollDanger() {
+    const ability = document.getElementById('danger-ability').value;
+    const hasAdvantage = document.getElementById('danger-advantage').checked;
+    const abilityValue = character[ability];
+    
+    // Check for Beacon bonus
+    let bonusFromBeacon = 0;
+    if (character.featureFlags.beacon) {
+        // Would need to track if Light is active on wielded object
+        // For now, add a checkbox or assume it could apply
+    }
+    
+    let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
+    let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
+    let diceTotal = kept.reduce((a, b) => a + b, 0);
+    let total = diceTotal + abilityValue + bonusFromBeacon;
+    let success = total >= 10;
+    
+    const resultDiv = document.getElementById('danger-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
+        <div class="total">${diceTotal} + ${abilityValue} ${ability.toUpperCase()} = <strong>${total}</strong></div>
+        <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${success ? 'SUCCESS!' : 'FAILURE!'}
+        </div>
+    `;
+    
+    addToRollHistory(`Danger (${ability.toUpperCase()}): ${total} → ${success ? 'Success' : 'Failure'}`);
+}
+
+function rollOpposed() {
+    const yourBonus = parseInt(document.getElementById('opposed-your-bonus').value) || 0;
+    const oppBonus = parseInt(document.getElementById('opposed-opp-bonus').value) || 0;
+    
+    const yourDice = rollMultiple(2, 6);
+    const oppDice = rollMultiple(2, 6);
+    const yourTotal = yourDice.reduce((a,b) => a+b, 0) + yourBonus;
+    const oppTotal = oppDice.reduce((a,b) => a+b, 0) + oppBonus;
+    
+    const youWin = yourTotal > oppTotal;
+    
+    const resultDiv = document.getElementById('opposed-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div>You: [${yourDice.join('] [')}] + ${yourBonus} = <strong>${yourTotal}</strong></div>
+        <div>Opponent: [${oppDice.join('] [')}] + ${oppBonus} = <strong>${oppTotal}</strong></div>
+        <div class="${youWin ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${youWin ? 'You Win!' : 'Opponent Wins!'}
+        </div>
+    `;
+    
+    addToRollHistory(`Opposed: ${yourTotal} vs ${oppTotal} → ${youWin ? 'You win' : 'Opponent wins'}`);
+}
+
+function rollBarter() {
+    const quality = parseInt(document.getElementById('barter-quality').value) || 0;
+    const dice = rollMultiple(2, 6);
+    const total = dice.reduce((a,b) => a+b, 0) + character.wil;
+    const success = total >= 10;
+    const resultQuality = success ? quality : Math.max(0, quality - 1);
+    
+    const resultDiv = document.getElementById('barter-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${dice.join('] [')}]</div>
+        <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${character.wil} WIL = <strong>${total}</strong></div>
+        <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${success ? `Equal Trade! (Quality ${resultQuality})` : `Lower Quality Trade (Quality ${resultQuality})`}
+        </div>
+    `;
+    
+    addToRollHistory(`Barter: ${total} → Quality ${resultQuality} item`);
+}
+
+function addToRollHistory(message) {
+    rollHistory.unshift(message);
+    if (rollHistory.length > 20) rollHistory.pop();
+    document.getElementById('roll-history').innerHTML = rollHistory.map(r => `<div class="item"><span>${r}</span></div>`).join('');
+}
+
+function clearRollHistory() {
+    rollHistory = [];
+    document.getElementById('roll-history').innerHTML = '';
+}
+
+// ============ EXPLORATION ============
+function rollHazard() {
+    const result = roll(6);
+    const hazard = TABLES.hazards[result - 1];
+    
+    const resultDiv = document.getElementById('hazard-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${result}]</div>
+        <div style="font-size:20px; margin-top:10px;"><strong>${hazard.name}</strong></div>
+        <div>${hazard.desc}</div>
+    `;
+}
+
+function rollMorale() {
+    const npcWil = parseInt(document.getElementById('morale-wil').value) || 0;
+    const dice = rollMultiple(2, 6);
+    const total = dice.reduce((a,b) => a+b, 0) + npcWil;
+    const success = total >= 10;
+    
+    const resultDiv = document.getElementById('morale-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <div class="dice">[${dice.join('] [')}]</div>
+        <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${npcWil} WIL = <strong>${total}</strong></div>
+        <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+            ${success ? 'NPC Holds!' : 'NPC Routs/Begs for Mercy!'}
+        </div>
+    `;
+}
+
+function awardSessionXP() {
+    const checks = document.querySelectorAll('.xp-check:checked');
+    const xp = checks.length;
+    if (xp > 0) {
+        addXP(xp);
+        alert(`Awarded ${xp} XP!`);
+        checks.forEach(c => c.checked = false);
+    } else {
+        alert('No XP to award - check the boxes for "yes" answers first!');
+    }
+}
+
+// ============ PATH ADVANTAGE CHECK ============
+function checkPathAdvantage(situation) {
+    const allPaths = [character.path, ...character.paths].filter(p => p);
+    const pathKeywords = {
+        'Briarborn': ['tracking', 'foraging', 'survival', 'wilderness', 'nature', 'forest', 'hunt', 'animal'],
+        'Fingersmith': ['tinkering', 'crafting', 'picking', 'locks', 'pockets', 'mechanism', 'device', 'trap'],
+        'Roofrunner': ['climbing', 'leaping', 'balancing', 'scaling', 'crawling', 'jump', 'acrobat', 'height'],
+        'Shadowjack': ['silent', 'hiding', 'shadows', 'sneaking', 'stealth', 'unseen', 'quiet'],
+        'Truthweaver': ['convincing', 'commanding', 'manipulating', 'demanding', 'persuade', 'lie', 'charm', 'intimidate']
+    };
+    
+    const situationLower = situation.toLowerCase();
+    
+    for (const path of allPaths) {
+        const keywords = pathKeywords[path] || [];
+        if (keywords.some(kw => situationLower.includes(kw))) {
+            return { applies: true, path: path };
+        }
+    }
+    
+    return { applies: false };
+}
+
+// ============ SAVE/LOAD ============
+function saveCharacter() {
+    localStorage.setItem('islandRatsCharacter', JSON.stringify(character));
+}
+
+function loadCharacter() {
+    const saved = localStorage.getItem('islandRatsCharacter');
+    if (saved) {
+        const loadedChar = JSON.parse(saved);
+        // Merge with default to ensure all new properties exist
+        character = {
+            ...character,
+            ...loadedChar,
+            featureFlags: {
+                ...character.featureFlags,
+                ...(loadedChar.featureFlags || {})
             }
-        }
+        };
+        updateDisplay();
+    }
+}
 
-        function deleteCharacter() {
-            if (confirm('Are you sure you want to delete this character? This cannot be undone!')) {
-                localStorage.removeItem('islandRatsCharacter');
-                character = {
-                    name: "", level: 1, xp: 0, str: 0, dex: 0, wil: 0,
-                    maxHealth: 6, currentHealth: 6, armor: 6, archetype: "",
-                    features: [], weapons: [], items: [], goal: "",
-                    relationship: "", background: "", spells: [],
-                    essence: 0, maxEssence: 2, prayers: 0, maxPrayers: 3,
-                    quintessence: [], implement: "", domain: "",
-                    signatureWeapon: "", signatureEnhancements: [],
-                    path: "", scars: []
-                };
-                updateDisplay();
-                alert('Character deleted.');
-            }
-        }
+function deleteCharacter() {
+    if (confirm('Are you sure you want to delete this character? This cannot be undone!')) {
+        localStorage.removeItem('islandRatsCharacter');
+        character = {
+            name: "", level: 1, xp: 0, str: 0, dex: 0, wil: 0,
+            maxHealth: 6, currentHealth: 6, armor: 6, archetype: "",
+            features: [], weapons: [], items: [], goal: "",
+            relationship: "", background: "", spells: [],
+            essence: 0, maxEssence: 2, prayers: 0, maxPrayers: 3,
+            quintessence: [], implement: "", domain: "",
+            signatureWeapon: "", signatureEnhancements: [],
+            path: "", scars: [],
+            attackBonus: 0, paths: [], miracles: [], customMiracles: [],
+            featureFlags: {
+                augment: false, recall: false, extract: false,
+                shape: false, experiment: false, craft: false,
+                permeable: false, quickened: false, dazzle: false,
+                beacon: false, smite: false, ward: false,
+                enhance: false, reflexes: false, riposte: false,
+                fortitude: false, skirmish: false
+            },
+            experimentSpell: null, keptSpells: [], tempHealth: 0
+        };
+        updateDisplay();
+        alert('Character deleted.');
+    }
+}
 
-        function exportCharacter() {
-            const data = JSON.stringify(character, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${character.name || 'character'}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+function exportCharacter() {
+    const data = JSON.stringify(character, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${character.name || 'character'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
-        function populateDropdown(selectId, dataArray, valueProperty = 'name') {
+function populateDropdown(selectId, dataArray, valueProperty = 'name') {
     const select = document.getElementById(selectId);
     if (!select) {
         console.error(`Select element with id "${selectId}" not found`);
         return;
     }
 
-    // Clear existing options (except maybe a placeholder if you want one)
     select.innerHTML = '';
 
     dataArray.forEach((item, index) => {
@@ -1720,22 +3026,23 @@ const TABLES = {
     });
 }
 
-        // ============ INITIALIZATION ============
-        loadCharacter();
-        updateDisplay();
-        function initDropdowns() {
-            populateSelect('create-tool1', TABLES.tools);
-            populateSelect('create-tool2', TABLES.tools);
-            populateSelect('create-item1', TABLES.items);
-            populateSelect('create-item2', TABLES.items);
-            populateDropdown('create-weapons', TABLES.weaponPackages, valueProperty=false);
-            populateSelect('create-goal', TABLES.goals);
-            populateSelect('create-relationship', TABLES.relationships);
-            populateDropdown('create-background', TABLES.backgrounds); 
-        }
+// ============ INITIALIZATION ============
+loadCharacter();
+updateDisplay();
 
-// Call when page loads
+function initDropdowns() {
+    populateSelect('create-tool1', TABLES.tools);
+    populateSelect('create-tool2', TABLES.tools);
+    populateSelect('create-item1', TABLES.items);
+    populateSelect('create-item2', TABLES.items);
+    populateDropdown('create-weapons', TABLES.weaponPackages, false);
+    populateSelect('create-goal', TABLES.goals);
+    populateSelect('create-relationship', TABLES.relationships);
+    populateDropdown('create-background', TABLES.backgrounds);
+}
+
 document.addEventListener('DOMContentLoaded', initDropdowns);
     </script>
 </body>
 </html>
+
