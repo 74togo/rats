@@ -42,7 +42,7 @@
         .combat-log { background: #0f3460; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; }
         .log-entry { padding: 5px; border-bottom: 1px solid #1a1a2e; }
         .health-bar { background: #333; border-radius: 10px; height: 30px; overflow: hidden; margin: 10px 0; }
-        .health-fill { background: linear-gradient(90deg, #c23616, #e94560); height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .health-fill { background: linear-gradient(90deg, #c23616, #e94560); height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-weight: bold; padding-left: 2em; }
         .section { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; margin: 10px 0; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #0f3460; }
@@ -511,8 +511,8 @@
             <button onclick="rollInitiative()">🏃 Roll DEX Danger Roll</button>
             <div id="initiative-result" class="roll-result" style="display:none;"></div>
 
-            <h3>Scar Roll (At 0 HP)</h3>
-            <button onclick="rollScar()" class="btn-danger">💀 Roll Scar</button>
+            <h3>Dying Roll (At ≤0 HP)</h3>
+            <button onclick="rollScar()" class="btn-danger">💀 Dying Roll</button>
             <div id="scar-result" class="roll-result" style="display:none;"></div>
 
             <h3>Combat Log</h3>
@@ -1377,9 +1377,9 @@ function modifyHealth(amount) {
         }
     }
     
-    character.currentHealth = Math.max(0, Math.min(character.maxHealth, character.currentHealth + amount));
-    if (character.currentHealth === 0) {
-        alert('Character is at 0 HP! Roll for a Scar in the Combat tab.');
+    character.currentHealth =  Math.min(character.maxHealth, character.currentHealth + amount);
+    if (character.currentHealth <= 0) {
+        alert('Character is at 0 HP or less! Do a dying roll in the Combat tab.');
     }
     updateDisplay();
     saveCharacter();
@@ -2670,7 +2670,7 @@ function calculateDamage() {
         }
         
         if (character.currentHealth <= 0) {
-            resultDiv.innerHTML += `<div class="failure" style="margin-top:10px;">⚠️ AT 0 HP - Roll for Scar!</div>`;
+            resultDiv.innerHTML += `<div class="failure" style="margin-top:10px;">⚠️ AT ≤0 HP - Do a dying roll!!</div>`;
         }
         logCombat(`Took ${damage} damage (${incoming} - ${armor} armor). HP: ${character.currentHealth}/${character.maxHealth}`);
     } else {
@@ -2721,7 +2721,7 @@ function rollInitiative() {
     
     logCombat(`Initiative: ${total} → ${success ? 'Go first' : 'Go after enemies'}`);
 }
-
+/*
 function rollScar() {
     // Check for Fortitude feature
     let dice, result;
@@ -2776,6 +2776,127 @@ function applyScarResult(diceKept) {
     updateDisplay();
     saveCharacter();
     logCombat(`Scar rolled: ${scar}`);
+}
+*/
+
+function rollScar() {
+    let excessDamage = character.currentHealth > 0 ? 0 : Math.abs(character.currentHealth);
+    const resultDiv = document.getElementById('scar-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '';
+
+    // 1. Fortitude Feature: Roll 3d, choose 2
+    if (character.featureFlags.fortitude) {
+        // Roll 3 separate dice
+        const d1 = roll(6);
+        const d2 = roll(6);
+        const d3 = roll(6);
+        const dice = [d1, d2, d3];
+
+        // Pre-calculate pairs for the buttons
+        // Option 1: Keep d1 + d2
+        // Option 2: Keep d1 + d3
+        // Option 3: Keep d2 + d3
+        const options = [
+            { kept: [d1, d2], sum: d1 + d2 + excessDamage },
+            { kept: [d1, d3], sum: d1 + d3 + excessDamage },
+            { kept: [d2, d3], sum: d2 + d3 + excessDamage }
+        ];
+
+        resultDiv.innerHTML = `
+            <div class="dice-display">
+                Rolled: [${d1}] [${d2}] [${d3}] (Fortitude)
+                ${excessDamage > 0 ? `<br>Excess Damage: +${excessDamage}` : ''}
+            </div>
+            <p><strong>Fortitude:</strong> Select which dice to keep:</p>
+            <div class="button-group">
+                ${options.map(opt => `
+                    <button onclick="applyScarResult([${opt.kept.join(',')}], ${excessDamage})">
+                        Keep [${opt.kept.join(' + ')}] 
+                        ${excessDamage > 0 ? `+ ${excessDamage}` : ''}
+                        = <strong>${opt.sum}</strong>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        return;
+    }
+
+    // 2. Standard Rule: Roll 2d
+    const result = [roll(6), roll(6)];
+    
+    // Show initial roll immediately
+    resultDiv.innerHTML = `
+        <div class="dice-display">
+            Rolled: [${result.join('] [')}]
+            ${excessDamage > 0 ? ` + Excess Damage: ${excessDamage}` : ''}
+        </div>
+    `;
+
+    applyScarResult(result, excessDamage);
+}
+
+function applyScarResult(keptDice, excessDamage) {
+    const resultDiv = document.getElementById('scar-result');
+    
+    // Calculate Total
+    const diceSum = keptDice.reduce((a, b) => a + b, 0);
+    const total = diceSum + excessDamage;
+
+    let html = `<div class="final-result" style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">`;
+    
+    html += `<h3>Total: ${total}</h3>`;
+
+    if (total >= 10) {
+        // --- DEAD ---
+        html += `
+            <div class="outcome dead" style="color: red;">
+                <strong>RESULT: 10+ (DEAD)</strong>
+                <p>You are dead. Roll a new character.</p>
+            </div>`;
+    } 
+    else if (total >= 7) {
+        // --- UNCONSCIOUS ---
+        html += `
+            <div class="outcome unconscious" style="color: darkorange;">
+                <strong>RESULT: 7-9 (UNCONSCIOUS)</strong>
+                <p>You are unconscious and bleeding out.</p>
+                <p><em>At the end of your sides’ turn, roll 1d. When you roll a 6, you are dead.</em></p>
+            </div>`;
+    } 
+    else {
+        // --- SCAR (6 or less) ---
+        // Roll the specific scar
+        const scarDie = roll(6);
+        
+        let scar = TABLES.scars[scarDie - 1];
+    
+        // Apply scar effects
+        if (scarDie === 2) {
+            const abilities = ['str', 'dex', 'wil'];
+            const reduced = pick(abilities);
+            character[reduced]--;
+            alert(`Broken! ${reduced.toUpperCase()} reduced by 1.`);
+        } else if (scarDie === 3) {
+            character.maxHealth--;
+            alert('Maimed! Max Health reduced by 1.');
+        } else if (scarDie === 5) {
+            const mutation = pick(TABLES.mutations);
+            scar = `Twisted: Mutation: ${mutation}`;
+        } else if (scarDie === 6) {
+            const insanity = pick(TABLES.insanities);
+            scar = `Splintered: Insanity: ${insanity}`;
+        }
+
+        logCombat(`Scar rolled: ${scar}`);
+        character.scars.push(scar);
+        character.currentHealth = 1;
+    }
+
+    resultDiv.innerHTML = html;
+
+    updateDisplay();
+    saveCharacter();
 }
 
 function logCombat(message) {
