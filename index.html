@@ -1491,7 +1491,10 @@ function updateFeatureSelectionPanel() {
     const featureLevels = [3, 5, 7, 9];
     const earnedFeatures = featureLevels.filter(l => character.level >= l).length;
     const usedFeatures = countUsedArchetypeFeatures();
-    const availableFeatures = earnedFeatures - usedFeatures;
+    
+    // TODO revert this hack
+    // const availableFeatures = earnedFeatures - usedFeatures;
+    const availableFeatures = 9999;
     
     if (availableFeatures <= 0 || !character.archetype) {
         featurePanel.innerHTML = '<p>No feature slots available.</p>';
@@ -2002,7 +2005,7 @@ function showRecallDialog() {
         <div class="spell-option">
             <label>
                 <input type="checkbox" class="recall-spell" value="${i}">
-                <strong>${s.name}</strong>: ${s.desc}
+                <strong>${s.name}</strong>: ${s.desc}${s.effect ? ' [' + s.effect + ']' : ''}
             </label>
         </div>
     `).join('');
@@ -2161,23 +2164,21 @@ function confirmShapeSpell() {
 }
 
 function showExtractDialog() {
-    const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
-    const allElements = [...TABLES.physicalElements, ...TABLES.etherealElements];
-    const allForms = [...TABLES.physicalForms, ...TABLES.etherealForms];
+    const spellsHtml = ritualState.rolledSpells.map((s, i) => `
+        <div class="spell-option">
+            <label>
+                <strong>${s.name}</strong>: ${s.desc}${s.effect ? ' [' + s.effect + ']' : ''}
+            </label>
+        </div>
+    `).join('');
     
     createDialog('Extract - Choose Final Spell', `
-        <p>Choose components for your final spell:</p>
-        <label>Effect:</label>
-        <select id="extract-effect">
-            ${allEffects.map((e, i) => `<option value="${i}">${e}</option>`).join('')}
-        </select>
-        <label>Element:</label>
-        <select id="extract-element">
-            ${allElements.map((e, i) => `<option value="${i}">${e}</option>`).join('')}
-        </select>
-        <label>Form:</label>
-        <select id="extract-form">
-            ${allForms.map((f, i) => `<option value="${i}">${f}</option>`).join('')}
+        <p>Spells gained so far:</p>
+        <div class="spell-list">${spellsHtml}</div>
+        <p>Choose your final spell:</p>
+        <label>Spell:</label>
+        <select id="extract-spell">
+            ${Object.entries(TABLES.spells).map(([i, e]) => `<option value="${i}">${e.name}: ${e.desc}</option>`).join('')}
         </select>
         <div class="dialog-buttons">
             <button onclick="confirmExtract()">Create Spell</button>
@@ -2186,20 +2187,12 @@ function showExtractDialog() {
 }
 
 function confirmExtract() {
-    const effectIdx = parseInt(document.getElementById('extract-effect').value);
-    const elementIdx = parseInt(document.getElementById('extract-element').value);
-    const formIdx = parseInt(document.getElementById('extract-form').value);
+    const spellCode = parseInt(document.getElementById('extract-spell').value);
     
-    const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
-    const allElements = [...TABLES.physicalElements, ...TABLES.etherealElements];
-    const allForms = [...TABLES.physicalForms, ...TABLES.etherealForms];
-    
-    const spell = {
-        name: `${allEffects[effectIdx]} ${allElements[elementIdx]} ${allForms[formIdx]}`,
-        desc: 'An extracted mystical spell.'
-    };
+    const spell = TABLES.spells[spellCode];
     
     if (character.featureFlags.augment) {
+        const allEffects = [...TABLES.physicalEffects, ...TABLES.etherealEffects];
         spell.effect = pick(allEffects);
     }
     
@@ -2213,7 +2206,7 @@ function showExperimentReplace() {
         <div class="spell-option">
             <label>
                 <input type="radio" name="replace-spell" value="${i}">
-                <strong>${s.name}</strong>: ${s.desc}
+                <strong>${s.name}</strong>: ${s.desc}${s.effect ? ' [' + s.effect + ']' : ''}
             </label>
         </div>
     `).join('');
@@ -2491,7 +2484,7 @@ function createCharacter() {
 }
 
 // ============ SPELLS ============
-function generateRandomSpell() {
+function generateOldRandomSpell() {
     const effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
     const element = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
     const form = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
@@ -2510,7 +2503,7 @@ function generateRandomSpell() {
 }
 
 function generateSpell() {
-    const spell = generateRandomSpell();
+    const spell = generateOldRandomSpell();
     const resultDiv = document.getElementById('generated-spell');
     resultDiv.style.display = 'block';
     resultDiv.innerHTML = `
@@ -2519,6 +2512,16 @@ function generateSpell() {
         ${spell.effect ? `<p><strong>Augmented Effect:</strong> ${spell.effect}</p>` : ''}
         <button onclick="addSpellToCharacter('${spell.name}', '${spell.desc}', '${spell.effect || ''}')">Add to Memorized Spells</button>
     `;
+}
+
+function generateRandomSpell() {
+    const d1 = Math.ceil(roll(6) / 2);
+    const d2 = roll(6);
+    const d3 = roll(6);
+    const code = d1 * 100 + d2 * 10 + d3;
+    
+    let spell = TABLES.spells[code];
+    return spell;
 }
 
 function generateSpellFromTable() {
