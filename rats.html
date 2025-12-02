@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Island Rats Character Manager</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #e94560; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        h2 { color: #0f3460; background: #e94560; padding: 10px; border-radius: 5px; margin: 15px 0 10px; }
+        h3 { color: #e94560; margin: 10px 0; border-bottom: 1px solid #e94560; padding-bottom: 5px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; background: #16213e; border: none; color: #eee; cursor: pointer; border-radius: 5px 5px 0 0; transition: all 0.3s; }
+        .tab:hover, .tab.active { background: #e94560; }
+        .panel { display: none; background: #16213e; padding: 20px; border-radius: 0 5px 5px 5px; }
+        .panel.active { display: block; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+        .stat-box { background: #0f3460; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-box label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        .stat-box .value { font-size: 24px; font-weight: bold; color: #e94560; }
+        input, select, button, textarea { padding: 10px; border: none; border-radius: 5px; font-size: 14px; }
+        input, select, textarea { background: #0f3460; color: #eee; width: 100%; margin: 5px 0; }
+        button { background: #e94560; color: #fff; cursor: pointer; transition: all 0.3s; margin: 5px 2px; }
+        button:hover { background: #ff6b6b; transform: translateY(-2px); }
+        .btn-small { padding: 5px 10px; font-size: 12px; }
+        .btn-danger { background: #c23616; }
+        .btn-success { background: #44bd32; }
+        .row { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
+        .item-list { background: #0f3460; padding: 10px; border-radius: 5px; margin: 10px 0; max-height: 200px; overflow-y: auto; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #1a1a2e; }
+        .item:last-child { border-bottom: none; }
+        .spell-card { background: #0f3460; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #e94560; }
+        .spell-card h4 { color: #e94560; margin-bottom: 10px; }
+        .roll-result { background: #0f3460; padding: 20px; border-radius: 5px; text-align: center; margin: 15px 0; }
+        .roll-result .dice { font-size: 36px; color: #e94560; }
+        .roll-result .total { font-size: 24px; margin-top: 10px; }
+        .success { color: #44bd32; }
+        .failure { color: #c23616; }
+        .combat-log { background: #0f3460; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; }
+        .log-entry { padding: 5px; border-bottom: 1px solid #1a1a2e; }
+        .health-bar { background: #333; border-radius: 10px; height: 30px; overflow: hidden; margin: 10px 0; }
+        .health-fill { background: linear-gradient(90deg, #c23616, #e94560); height: 100%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .section { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #0f3460; }
+        th { background: #0f3460; }
+        .highlight { color: #e94560; font-weight: bold; }
+        .flex-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Island Rats ⚔️</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('character')">Character Sheet</button>
+            <button class="tab" onclick="showTab('creation')">Create Character</button>
+            <button class="tab" onclick="showTab('spells')">Spells</button>
+            <button class="tab" onclick="showTab('combat')">Combat</button>
+            <button class="tab" onclick="showTab('dice')">Dice Roller</button>
+            <button class="tab" onclick="showTab('exploration')">Exploration</button>
+        </div>
+
+        <!-- CHARACTER SHEET PANEL -->
+        <div id="character" class="panel active">
+            <div class="row">
+                <div class="col">
+                    <div class="stat-box">
+                        <label>NAME</label>
+                        <div class="value" id="display-name">-</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat-box">
+                        <label>LEVEL</label>
+                        <div class="value" id="display-level">1</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat-box">
+                        <label>XP</label>
+                        <div class="value" id="display-xp">0</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="stat-box">
+                        <label>ARCHETYPE</label>
+                        <div class="value" id="display-archetype" style="font-size:16px;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Health</h3>
+            <div class="health-bar">
+                <div class="health-fill" id="health-bar-fill" style="width: 100%;">
+                    <span id="health-display">6/6</span>
+                </div>
+            </div>
+            <div class="row">
+                <button onclick="modifyHealth(-1)" class="btn-danger">-1 HP</button>
+                <button onclick="modifyHealth(1)" class="btn-success">+1 HP</button>
+                <button onclick="fullHeal()" class="btn-success">Full Heal</button>
+                <button onclick="useMedicine()">Use Medicine (+1 HP)</button>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <label>STRENGTH</label>
+                    <div class="value" id="display-str">+0</div>
+                </div>
+                <div class="stat-box">
+                    <label>DEXTERITY</label>
+                    <div class="value" id="display-dex">+0</div>
+                </div>
+                <div class="stat-box">
+                    <label>WILL</label>
+                    <div class="value" id="display-wil">+0</div>
+                </div>
+                <div class="stat-box">
+                    <label>ARMOR</label>
+                    <div class="value" id="display-armor">6</div>
+                </div>
+            </div>
+
+            <h3>Weapons & Equipment</h3>
+            <div class="item-list" id="weapons-list"></div>
+
+            <h3>Inventory (Belt & Backpack)</h3>
+            <div class="row">
+                <input type="text" id="new-item" placeholder="Add new item...">
+                <select id="item-location">
+                    <option value="belt">Belt</option>
+                    <option value="backpack">Backpack</option>
+                    <option value="hands">Hands</option>
+                    <option value="worn">Worn</option>
+                </select>
+                <button onclick="addItem()">Add</button>
+            </div>
+            <div class="item-list" id="inventory-list"></div>
+
+            <h3>Features & Abilities</h3>
+            <div class="item-list" id="features-list"></div>
+
+            <h3>Character Details</h3>
+            <div class="section">
+                <p><strong>Goal:</strong> <span id="display-goal">-</span></p>
+                <p><strong>Relationship:</strong> <span id="display-relationship">-</span></p>
+                <p><strong>Background:</strong> <span id="display-background">-</span></p>
+            </div>
+
+            <h3>Scars</h3>
+            <div class="item-list" id="scars-list"></div>
+
+            <div class="row" style="margin-top: 20px;">
+                <button onclick="addXP(1)" class="btn-success">+1 XP</button>
+                <button onclick="checkLevelUp()">Check Level Up</button>
+                <button onclick="saveCharacter()" class="btn-success">💾 Save Character</button>
+                <button onclick="exportCharacter()">📤 Export</button>
+                <button onclick="deleteCharacter()" class="btn-danger">🗑️ Delete Character</button>
+            </div>
+        </div>
+
+        <!-- CHARACTER CREATION PANEL -->
+        <div id="creation" class="panel">
+            <h3>1. Name</h3>
+            <div class="row">
+                <input type="text" id="char-name" placeholder="Enter character name">
+                <button onclick="randomName('male')">Random Male</button>
+                <button onclick="randomName('female')">Random Female</button>
+            </div>
+
+            <h3>2. Abilities</h3>
+            <div class="row">
+                <button onclick="rollAbilities()">🎲 Roll Abilities</button>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <label>STRENGTH</label>
+                    <input type="number" id="create-str" value="0" min="-2" max="4">
+                </div>
+                <div class="stat-box">
+                    <label>DEXTERITY</label>
+                    <input type="number" id="create-dex" value="0" min="-2" max="4">
+                </div>
+                <div class="stat-box">
+                    <label>WILL</label>
+                    <input type="number" id="create-wil" value="0" min="-2" max="4">
+                </div>
+            </div>
+
+            <h3>3. Archetype</h3>
+            <select id="create-archetype" onchange="updateArchetypeOptions()">
+                <option value="">Select Archetype...</option>
+                <option value="mage">Mage</option>
+                <option value="disciple">Disciple</option>
+                <option value="vagabond">Vagabond</option>
+            </select>
+            
+            <div id="archetype-options" class="section" style="display:none;"></div>
+
+            <h3>4. Weapon Package</h3>
+            <div class="row">
+                <select id="create-weapons">
+                    <option value="0">Light armor, shield, light weapon, ranged</option>
+                    <option value="1">Heavy armor, heavy weapon</option>
+                </select>
+                <button onclick="randomWeaponPackage()">🎲 Random</button>
+            </div>
+
+            <h3>5. Tools (Pick 2)</h3>
+            <div class="row">
+                <select id="create-tool1">
+                    <option value="Rope (50 ft.)">Rope (50 ft.)</option>
+                    <option value="Torches (3)">Torches (3)</option>
+                </select>
+                <select id="create-tool2">
+                    <option value="Rope (50 ft.)">Rope (50 ft.)</option>
+                    <option value="Torches (3)">Torches (3)</option>
+                </select>
+                <button onclick="randomTools()">🎲 Random</button>
+            </div>
+
+            <h3>6. Items (Pick 2)</h3>
+            <div class="row">
+                <select id="create-item1">
+                    <option value="Lantern">Lantern</option>
+                    <option value="Waterskin">Waterskin</option>
+                </select>
+                <select id="create-item2">
+                    <option value="Lantern">Lantern</option>
+                    <option value="Waterskin">Waterskin</option>
+                </select>
+                <button onclick="randomItems()">🎲 Random</button>
+            </div>
+
+            <h3>7. Goal</h3>
+            <div class="row">
+                <select id="create-goal">
+                    <option value="Wealth">Wealth</option>
+                    <option value="Revenge">Revenge</option>
+                </select>
+                <button onclick="randomGoal()">🎲 Random</button>
+            </div>
+
+            <h3>8. Relationship</h3>
+            <div class="row">
+                <select id="create-relationship">
+                    <option value="Rival">Rival</option>
+                    <option value="Mentor">Mentor</option>
+                </select>
+                <button onclick="randomRelationship()">🎲 Random</button>
+            </div>
+
+            <h3>9. Background</h3>
+            <div class="row">
+                <select id="create-background">
+                    <option value="Corner Beggar">Corner Beggar (street contacts, thieves' cant)</option>
+                    <option value="Mercenary">Mercenary (bloodoath coin, burden of souls)</option>
+                </select>
+                <button onclick="randomBackground()">🎲 Random</button>
+            </div>
+
+            <div class="section" style="margin-top: 20px;">
+                <button onclick="createCharacter()" class="btn-success" style="width:100%; padding:15px; font-size:18px;">
+                    ✨ Create Character ✨
+                </button>
+            </div>
+        </div>
+
+        <!-- SPELLS PANEL -->
+        <div id="spells" class="panel">
+            <h3>Spell Generator</h3>
+            <div class="row">
+                <button onclick="generateSpell()">🎲 Generate Random Spell</button>
+                <button onclick="generateSpellFromTable()">📖 Roll from 108 Spells</button>
+            </div>
+            
+            <div id="generated-spell" class="spell-card" style="display:none;"></div>
+
+            <h3>Mage Resources</h3>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <label>ESSENCE</label>
+                    <div class="row">
+                        <button class="btn-small" onclick="modifyEssence(-1)">-</button>
+                        <span class="value" id="display-essence">0</span>
+                        <button class="btn-small" onclick="modifyEssence(1)">+</button>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <label>MAX ESSENCE</label>
+                    <div class="value" id="display-max-essence">2</div>
+                </div>
+            </div>
+
+            <h3>Memorized Spells</h3>
+            <div class="row">
+                <button onclick="conductRitual()">🔮 Conduct Ritual (Roll New Spells)</button>
+            </div>
+            <div id="memorized-spells" class="item-list"></div>
+
+            <h3>Quintessence</h3>
+            <div class="item-list" id="quintessence-list"></div>
+
+            <h3>Spell Components Reference</h3>
+            <div class="row">
+                <button onclick="rollComponent('effect')">Roll Effect</button>
+                <button onclick="rollComponent('element')">Roll Element</button>
+                <button onclick="rollComponent('form')">Roll Form</button>
+            </div>
+            <div id="component-result" class="roll-result" style="display:none;"></div>
+        </div>
+
+        <!-- COMBAT PANEL -->
+        <div id="combat" class="panel">
+            <h3>Attack Calculator</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>Weapon Type:</label>
+                        <select id="weapon-type">
+                            <option value="-1">Unarmed (-1 AB)</option>
+                            <option value="1">Light Weapon (+1 AB)</option>
+                            <option value="2">Heavy Weapon (+2 AB)</option>
+                            <option value="0">Ranged Weapon (+0 AB)</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>Target Armor:</label>
+                        <input type="number" id="target-armor" value="6" min="0">
+                    </div>
+                </div>
+                <div class="row">
+                    <label><input type="checkbox" id="has-advantage"> Has Advantage</label>
+                </div>
+                <button onclick="rollAttack()" style="width:100%; padding:15px;">⚔️ Roll Attack</button>
+            </div>
+            
+            <div id="attack-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Defend Against Attack</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>Incoming Attack Total:</label>
+                        <input type="number" id="incoming-attack" value="8" min="0">
+                    </div>
+                </div>
+                <button onclick="calculateDamage()" style="width:100%;">🛡️ Calculate Damage Taken</button>
+            </div>
+            <div id="damage-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Initiative Roll</h3>
+            <button onclick="rollInitiative()">🏃 Roll DEX Danger Roll</button>
+            <div id="initiative-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Scar Roll (At 0 HP)</h3>
+            <button onclick="rollScar()" class="btn-danger">💀 Roll Scar</button>
+            <div id="scar-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Combat Log</h3>
+            <div class="combat-log" id="combat-log"></div>
+            <button onclick="clearCombatLog()" class="btn-small">Clear Log</button>
+        </div>
+
+        <!-- DICE ROLLER PANEL -->
+        <div id="dice" class="panel">
+            <h3>Quick Rolls</h3>
+            <div class="flex-wrap">
+                <button onclick="quickRoll(1, 6)">1d6</button>
+                <button onclick="quickRoll(2, 6)">2d6</button>
+                <button onclick="quickRoll(3, 6)">3d6</button>
+                <button onclick="quickRoll(1, 20)">1d20</button>
+            </div>
+
+            <h3>Danger Roll</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>Ability:</label>
+                        <select id="danger-ability">
+                            <option value="str">Strength</option>
+                            <option value="dex">Dexterity</option>
+                            <option value="wil">Will</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label><input type="checkbox" id="danger-advantage"> Advantage (3d keep 2)</label>
+                    </div>
+                </div>
+                <button onclick="rollDanger()" style="width:100%;">🎲 Roll Danger</button>
+            </div>
+            <div id="danger-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Opposed Roll</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>Your Ability Bonus:</label>
+                        <input type="number" id="opposed-your-bonus" value="0">
+                    </div>
+                    <div class="col">
+                        <label>Opponent's Ability Bonus:</label>
+                        <input type="number" id="opposed-opp-bonus" value="0">
+                    </div>
+                </div>
+                <button onclick="rollOpposed()" style="width:100%;">⚔️ Roll Opposed</button>
+            </div>
+            <div id="opposed-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Barter Roll</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>Staked Item Quality:</label>
+                        <input type="number" id="barter-quality" value="1" min="0" max="7">
+                    </div>
+                </div>
+                <button onclick="rollBarter()" style="width:100%;">💰 Roll Barter</button>
+            </div>
+            <div id="barter-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Roll History</h3>
+            <div class="item-list" id="roll-history"></div>
+            <button onclick="clearRollHistory()" class="btn-small">Clear History</button>
+        </div>
+
+        <!-- EXPLORATION PANEL -->
+        <div id="exploration" class="panel">
+            <h3>Hazard Roll</h3>
+            <p>Roll when PCs spend time or do something that might attract attention.</p>
+            <button onclick="rollHazard()" style="width:100%; padding:15px;">🎲 Roll Hazard (1d6)</button>
+            <div id="hazard-result" class="roll-result" style="display:none;"></div>
+
+            <h3>Morale Check</h3>
+            <div class="section">
+                <div class="row">
+                    <div class="col">
+                        <label>NPC Will Bonus:</label>
+                        <input type="number" id="morale-wil" value="0">
+                    </div>
+                </div>
+                <button onclick="rollMorale()">💔 Roll Morale</button>
+            </div>
+            <div id="morale-result" class="roll-result" style="display:none;"></div>
+
+            <h3>XP Checklist</h3>
+            <div class="section">
+                <p>Answer at end of session (1 XP each "yes"):</p>
+                <label><input type="checkbox" class="xp-check"> Did I explore somewhere new?</label><br>
+                <label><input type="checkbox" class="xp-check"> Did we complete a contract?</label><br>
+                <label><input type="checkbox" class="xp-check"> Did we overcome a notable foe?</label><br>
+                <label><input type="checkbox" class="xp-check"> Did we change the world?</label><br>
+                <label><input type="checkbox" class="xp-check"> Did we work together as a party?</label><br>
+                <button onclick="awardSessionXP()" class="btn-success" style="margin-top:10px;">Award XP</button>
+            </div>
+
+            <h3>Level Progression</h3>
+            <table>
+                <tr><th>Level</th><th>XP Required</th><th>Rank</th><th>Gain</th></tr>
+                <tr><td>1</td><td>0</td><td>Porcelain</td><td>-</td></tr>
+                <tr><td>2</td><td>2</td><td>Copper</td><td>+1 Ability</td></tr>
+                <tr><td>3</td><td>6</td><td>Silver</td><td>+1 Feature</td></tr>
+                <tr><td>4</td><td>12</td><td>Gold</td><td>+1 Ability</td></tr>
+                <tr><td>5</td><td>20</td><td>Platinum</td><td>+1 Feature</td></tr>
+            </table>
+
+            <h3>Quality Reference</h3>
+            <table>
+                <tr><th>Quality</th><th>Examples</th></tr>
+                <tr><td>0</td><td>Common item, light weapon, single coin</td></tr>
+                <tr><td>1</td><td>Specialty item, ranged weapon, shield</td></tr>
+                <tr><td>2</td><td>Light armor, heavy weapon, potion</td></tr>
+                <tr><td>3</td><td>Heavy armor, small magic item</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ============ DATA TABLES ============
+
+const TABLES = {
+    abilities: [
+        { str: 2, dex: 1, wil: 0 },
+        { str: 2, dex: 0, wil: 1 },
+        { str: 1, dex: 2, wil: 0 },
+        { str: 0, dex: 2, wil: 1 },
+        { str: 1, dex: 0, wil: 2 },
+        { str: 0, dex: 1, wil: 2 }
+    ],
+    
+    weaponPackages: [
+        { name: "Light armor, shield, light weapon, ranged weapon", armor: 7, items: ["Light Armor (worn)", "Shield (+1 armor)", "Light Weapon (+1 AB)", "Ranged Weapon (+0 AB)"] },
+        { name: "Light armor, shield, light weapon, ranged weapon", armor: 7, items: ["Light Armor (worn)", "Shield (+1 armor)", "Light Weapon (+1 AB)", "Ranged Weapon (+0 AB)"] },
+        { name: "Light armor, light weapon, heavy weapon", armor: 7, items: ["Light Armor (worn)", "Light Weapon (+1 AB)", "Heavy Weapon (+2 AB)"] },
+        { name: "Light armor, heavy weapon, ranged weapon", armor: 7, items: ["Light Armor (worn)", "Heavy Weapon (+2 AB)", "Ranged Weapon (+0 AB)"] },
+        { name: "Heavy armor, light weapon, ranged weapon", armor: 8, items: ["Heavy Armor (worn)", "Light Weapon (+1 AB)", "Ranged Weapon (+0 AB)"] },
+        { name: "Heavy armor, heavy weapon", armor: 8, items: ["Heavy Armor (worn)", "Heavy Weapon (+2 AB)"] }
+    ],
+    
+    tools: [
+        "Animal scent", "Bear trap", "Bedroll", "Caltrops", "Chain (10 ft.)", "Chalk",
+        "Iron tongs", "Lantern and oil", "Large sack", "Lockpicks (3)", "Manacles", "Medicine (3)",
+        "Chisel", "Grease", "Crowbar", "Hacksaw", "Fishing net", "Hammer",
+        "Glass marbles", "Hand drill", "Glue", "Horn", "Grappling hook", "Iron spikes",
+        "Metal file", "Rations (3)", "Rope (50 ft.)", "Steel wire", "Shovel", "Steel mirror",
+        "Ten foot pole", "Tinderbox", "Torches (3)", "Vial of acid", "Vial of poison", "Waterskin"
+    ],
+    
+    items: [
+        "Book", "Bottle", "Bucket", "Candles (5)", "Card deck", "Chicken",
+        "Cow", "Dice set", "Face paint", "Fake jewels", "Fishing rod", "Ham",
+        "Horn", "Hourglass", "Incense", "Instrument", "Keg", "Lens",
+        "Marbles", "Metal file", "Mirror", "Mystery egg", "Nails", "Perfume",
+        "Pick", "Pig", "Pipe", "Saw", "Skull", "Small bell",
+        "Soap", "Sponge", "Spyglass", "Tongs", "Waterskin", "Whistle"
+    ],
+    
+    goals: [
+        "A better life", "Enlightenment", "Acceptance", "Fame", "Acquire item", "Found faction",
+        "Craft item", "Freedom", "Destroy faction", "Glory", "Destroy item", "Impress NPC",
+        "Locate NPC", "Love", "Mastery", "Power", "Reach location", "Rescue NPC",
+        "Infamy", "Infiltrate faction", "Justice", "Kidnap NPC", "Lead faction", "Learning",
+        "Resolve dispute", "Serve evil", "Restore faction", "Serve faction", "Reveal a secret", "Serve ideology",
+        "Revenge", "Serve leader", "Sabotage faction", "Serve the needy", "Serve a deity", "Wealth"
+    ],
+    
+    relationships: [
+        "Adviser", "Client", "Blackmailer", "Confidant", "Business partner", "Debtor",
+        "Business rival", "Disciple", "Buyer", "Guardian", "Captor", "Henchman",
+        "Idiot twin", "Informant", "Master", "Mentor", "Nemesis", "Offspring",
+        "Parent", "Patron", "Political rival", "Prisoner", "Protégé", "Quarry",
+        "Stalker", "Suitor", "Supplicant", "Supplier", "Sweetheart", "Unrequited love",
+        "Right hand", "Romantic rival", "Servant", "Sibling", "Social rival", "Spouse"
+    ],
+    
+    backgrounds: [
+        { name: "Corner Beggar", items: ["street contacts", "thieves' cant"] },
+        { name: "Hypnotist", items: ["silver charm", "melodic voice"] },
+        { name: "Secret Initiate", items: ["holy water vial", "alabaster symbol"] },
+        { name: "Champion", items: ["coveted prize", "lover's token"] },
+        { name: "Hollow Jailer", items: ["buddies' flagon", "disease-immune"] },
+        { name: "Folk Hero", items: ["estate deed", "tokens of favor"] },
+        { name: "Inept Painter", items: ["forged art", "glowing chalk"] },
+        { name: "Fisherman", items: ["tall tale net", "old willow rod"] },
+        { name: "Forsaken Boatman", items: ["mossy rowing boat", "shell of lost voices"] },
+        { name: "Fortune Teller", items: ["unfinished tarot", "rabid rat's foot"] },
+        { name: "Wanted Gambler", items: ["loaded dice", "serrated card (+0)"] },
+        { name: "Royal Guard", items: ["rusted banner", "princess' locket"] },
+        { name: "Herdsman", items: ["goddess flute", "sling (+0)"] },
+        { name: "Ember Alchemist", items: ["smoke flask", "bag of desert wind"] },
+        { name: "Monster Hunter", items: ["dragon heart", "dowsing claw"] },
+        { name: "Old Sea Wolf", items: ["lost hand or leg", "pirate flag"] },
+        { name: "Town Agitator", items: ["pamphlets", "dog whistle"] },
+        { name: "Road Warden", items: ["spirit's true name", "family horse"] },
+        { name: "Game Keeper", items: ["man trap", "oak pet whistle"] },
+        { name: "Grave Robber", items: ["spade of bones", "forgotten will"] },
+        { name: "Counterfeiter", items: ["fake coins (100)", "forged certificate"] },
+        { name: "City Watch", items: ["spectre lantern", "pierce shield (+1)"] },
+        { name: "Failed Inventor", items: ["returning wrench", "sky-warped gear"] },
+        { name: "Decay Seer", items: ["cracked bones", "afterworld eyewear"] },
+        { name: "Ex-Slaver", items: ["rescued slave", "whip (+1)"] },
+        { name: "Burglar", items: ["monster's egg", "keyless lock"] },
+        { name: "Templar", items: ["etched promise", "full armor"] },
+        { name: "Herbalist", items: ["seed collection", "fae companion"] },
+        { name: "Troll Slayer", items: ["regeneration", "animal scent"] },
+        { name: "Forester", items: ["faerie tinder", "bloodsap axe (+2)"] },
+        { name: "Sea Captain", items: ["black spot", "phoenix feather"] },
+        { name: "Gang Leader", items: ["unreliable mooks", "bad reputation"] },
+        { name: "Footsoldier", items: ["traitor's mark", "heavy noose"] },
+        { name: "Rat Catcher", items: ["ten-foot pole", "bag of tricks"] },
+        { name: "Tattoo Artist", items: ["read runes", "inking tools"] },
+        { name: "Bounty Hunter", items: ["expired contract", "poison"] },
+        { name: "Mercenary", items: ["bloodoath coin", "burden of souls"] },
+        { name: "Prospector", items: ["map to riches", "bombs (4)"] },
+        { name: "Troubadour", items: ["stolen lute", "magic music box"] },
+        { name: "Vengeful Hermit", items: ["pet vermin", "hate list"] },
+        { name: "Exiled Monarch", items: ["bodyguard", "pet eagle"] },
+        { name: "Demigod", items: ["divine talent", "nectar of the gods"] },
+        { name: "Witch Hunter", items: ["hex-catcher", "engraved pistol (+1)"] },
+        { name: "Pixie Catcher", items: ["gremlin jar", "appearance dust"] },
+        { name: "Pit Fighter", items: ["rival's tooth", "brass knuckles (+1)"] },
+        { name: "Physician", items: ["serpent's tears", "poison, ether"] },
+        { name: "Hound Breeder", items: ["pet hound", "mind link"] },
+        { name: "Loxodon", items: ["eternal memory", "radiant staff"] },
+        { name: "Lost Legionnaire", items: ["ancient horn", "last orders"] },
+        { name: "Parcel Knight", items: ["introduction letter", "tower shield (+2)"] },
+        { name: "Rustler", items: ["stolen stock", "exotic mount"] },
+        { name: "Knife Thrower", items: ["unflattering cut", "balanced blades"] },
+        { name: "Outlander", items: ["obscuring hood", "lost culture"] },
+        { name: "Gnome", items: ["darkvision", "wand of illusion"] },
+        { name: "Coachman", items: ["hardy pony", "blunderbuss (+1)"] },
+        { name: "Hedge Knight", items: ["official signet", "steadfast squire"] },
+        { name: "Fire Eater", items: ["spinning torch (+1)", "trick manacles"] },
+        { name: "Foreign Slave", items: ["skeleton key", "alien culture"] },
+        { name: "Party Animal", items: ["raised by wolves", "party tricks"] },
+        { name: "Fae-touched", items: ["invisible powder", "dazzling lights"] },
+        { name: "Star Lawyer", items: ["gown with wig", "book of law"] },
+        { name: "Assassin", items: ["guild reptile", "blowgun (+0)"] },
+        { name: "Convicted Noble", items: ["lover's ring", "faithful follower"] },
+        { name: "Family Artisan", items: ["trade tools", "work hut"] },
+        { name: "Stargazer", items: ["telescope", "astronomy"] },
+        { name: "Elemental", items: ["natural infusion", "mute"] },
+        { name: "Grizzled Lawman", items: ["royal credentials", "lasso"] },
+        { name: "Targeteer", items: ["elven longbow (+1)", "lucky arrow"] },
+        { name: "Stage Actor", items: ["dramatic fame", "wigged disguise"] },
+        { name: "Cursed One", items: ["weighted stone", "bane claymore (+2)"] },
+        { name: "Angelic Offspring", items: ["feather wings", "lay on hands"] },
+        { name: "Infernal", items: ["telltale sign", "dealbinding scroll"] }
+    ],
+    
+    maleNames: [
+        "Balthazar", "Basil", "Bertram", "Blaxton", "Chadwick", "Clovis",
+        "Destrian", "Ellis", "Erasmus", "Faustus", "Finn", "Fitzhugh",
+        "Florian", "Fox", "Godwin", "Hannibal", "Jasper", "Jiles",
+        "Jules", "Leopold", "Merrick", "Mortimer", "Ogden", "Orion",
+        "Oswald", "Percival", "Peregrine", "Quentin", "Redmaine", "Reinhold",
+        "Silas", "Stilton", "Stratford", "Tenpiece", "Waverly", "Webster"
+    ],
+    
+    femaleNames: [
+        "Adelaide", "Alma", "Barsaba", "Beatrix", "Bianca", "Cleopha",
+        "Clover", "Constance", "Damaris", "Daphne", "Demona", "Elsbeth",
+        "Esme", "Fern", "Hester", "Hippolyta", "Jessamine", "Jilly",
+        "Morgot", "Minerva", "Nerissa", "Odette", "Olga", "Orchid",
+        "Pepper", "Phoebe", "Piety", "Poppy", "Silence", "Sybil",
+        "Trillby", "Tuesday", "Ursula", "Vivian", "Wendy", "Zora"
+    ],
+    
+    lowerSurnames: [
+        "Barrow", "Beetleman", "Berrycloth", "Birdwhistle", "Borrin", "Chips",
+        "Coffin", "Crumpling", "Culpepper", "Dankworth", "Digworthy", "Dreggs",
+        "Gimble", "Graveworm", "Greelish", "Hardwick", "Hatman", "Hovel",
+        "Knibbs", "Midnighter", "Needle", "Nethercoat", "Pestle", "Relish",
+        "Rumbold", "Rummage", "Sallow", "Saltmarsh", "Silverless", "Skitter",
+        "Slee", "Slitherly", "Stoker", "Tarwater", "Tumbler", "Villin"
+    ],
+    
+    upperSurnames: [
+        "Belvedere", "Bithesea", "Calaver", "Carvolo", "De Rippe", "Droll",
+        "Dunlow", "Edevane", "Erelong", "Febland", "Fernsby", "Fisk",
+        "Gastrell", "Girdwood", "Gorgon", "Grimeson", "Gruger", "Hitheryon",
+        "La Marque", "Malmora", "Miter", "Oblington", "Onymous", "Phillifent",
+        "Portendorfer", "Romatet", "Rothery", "Skorbeck", "Slora", "Southwark",
+        "Stavish", "Vandermeer", "Wellbelove", "Westergren", "Wexley", "Wilberforce"
+    ],
+    
+    implements: [
+        "Amulet", "Anklet", "Bandana", "Book", "Boots", "Bracelet",
+        "Broach", "Circlet", "Cloak", "Crown", "Earring", "Fake eye",
+        "Gloves", "Goggles", "Hat", "Ingot", "Locket", "Mask",
+        "Necklace", "Orb", "Phylactery", "Pipe", "Ring", "Rod",
+        "Scarf", "Scroll", "Spectacles", "Staff", "Symbol", "Tattoo",
+        "Tie", "Totem", "Valu. Material", "Veil", "Vest", "Wand"
+    ],
+    
+    domains: [
+        "Animal", "Balance", "Book", "Chance", "Chaos", "Circles",
+        "Conquest", "Death", "Destiny", "Dreams", "Element", "Form",
+        "Gateway", "Judgement", "Light", "Knowledge", "Monster", "Moon",
+        "Music", "NPC", "Oaths", "Order", "Plague", "Purification",
+        "Protection", "Secrets", "Storms", "Summer", "Sun", "The Forge",
+        "The Sea", "Time", "Underworld", "Wealth", "Wilderness", "Winter"
+    ],
+    
+    vagabondWeapons: [
+        "Blowgun", "Boomerang", "Cane sword", "Cat claw", "Chakram", "Claymore",
+        "Cleaver", "Club", "Crossbow", "Cutlass", "Dagger", "Flail",
+        "Gauntlet", "Greataxe", "Halberd", "Hammer", "Hand crossbow", "Hatchet",
+        "Javelin", "Longbow", "Longsword", "Mace", "Machete", "Maul",
+        "Morningstar", "Pistol", "Shield", "Shortsword", "Shovel", "Sickle",
+        "Sling", "Spear", "Staff", "Trident", "Warhammer", "Whip"
+    ],
+    
+    paths: ["Briarborn", "Shadowjack"],
+    
+    physicalEffects: [
+        "Animating", "Attracting", "Binding", "Blossoming", "Consuming", "Creeping",
+        "Crushing", "Diminishing", "Dividing", "Duplicating", "Enveloping", "Expanding",
+        "Fusing", "Grasping", "Hastening", "Hindering", "Illuminating", "Imprisoning",
+        "Levitating", "Opening", "Petrifying", "Phasing", "Piercing", "Pursuing",
+        "Reflecting", "Regenerating", "Rending", "Repelling", "Resurrecting", "Screaming",
+        "Sealing", "Shapeshifting", "Shielding", "Spawning", "Transmuting", "Transporting"
+    ],
+    
+    etherealEffects: [
+        "Avenging", "Compelling", "Banishing", "Concealing", "Bewildering", "Deafening",
+        "Deceiving", "Deciphering", "Disguising", "Dispelling", "Emboldening", "Encoding",
+        "Energizing", "Enlightening", "Enraging", "Excruciating", "Foreseeing", "Intoxicating",
+        "Maddening", "Mesmerizing", "Mindreading", "Nullifying", "Paralyzing", "Revealing",
+        "Revolting", "Scrying", "Silencing", "Soothing", "Summoning", "Terrifying",
+        "Warding", "Wearying", "Withering"
+    ],
+    
+    physicalElements: [
+        "Acid", "Amber", "Bark", "Blood", "Bone", "Brine",
+        "Clay", "Crow", "Crystal", "Ember", "Flesh", "Fungus",
+        "Glass", "Honey", "Ice", "Insect", "Wood", "Lava",
+        "Moss", "Obsidian", "Oil", "Poison", "Rat", "Salt",
+        "Sand", "Sap", "Serpent", "Slime", "Stone", "Tar",
+        "Thorn", "Vine", "Water", "Wine", "Wood", "Worm"
+    ],
+    
+    etherealElements: [
+        "Ash", "Chaos", "Distortion", "Dream", "Dust", "Echo",
+        "Ectoplasm", "Fire", "Fog", "Ghost", "Harmony", "Heat",
+        "Light", "Lightning", "Memory", "Mind", "Mutation", "Negation",
+        "Plague", "Plasma", "Probability", "Rain", "Rot", "Shadow",
+        "Smoke", "Snow", "Soul", "Star", "Stasis", "Steam",
+        "Thunder", "Time", "Void", "Warp", "Whisper", "Wind"
+    ],
+    
+    physicalForms: [
+        "Altar", "Armor", "Arrow", "Beast", "Blade", "Cauldron",
+        "Chain", "Chariot", "Claw", "Cloak", "Colossus", "Crown",
+        "Elemental", "Eye", "Fountain", "Gate", "Golem", "Hammer",
+        "Horn", "Key", "Mask", "Monolith", "Pit", "Prison",
+        "Sentinel", "Servant", "Shield", "Spear", "Steed", "Swarm",
+        "Tentacle", "Throne", "Torch", "Trap", "Wall", "Web"
+    ],
+    
+    etherealForms: [
+        "Aura", "Beacon", "Beam", "Blast", "Blob", "Bolt",
+        "Bubble", "Call", "Cascade", "Circle", "Cloud", "Coil",
+        "Cone", "Cube", "Dance", "Disk", "Field", "Form",
+        "Gaze", "Loop", "Moment", "Nexus", "Portal", "Pulse",
+        "Pyramid", "Ray", "Shard", "Sphere", "Spray", "Storm",
+        "Swarm", "Torrent", "Touch", "Vortex", "Wave", "Word"
+    ],
+    
+    scars: [
+        "Scabbed - Gain an ugly blemish or defect.",
+        "Broken - An ability is reduced by 1.",
+        "Maimed - Max Health is reduced by 1.",
+        "Wounded - Lose the use of a body part.",
+        "Twisted - Roll a Mutation.",
+        "Splintered - Roll an Insanity."
+    ],
+    
+    mutations: [
+        "Animal eyes", "Animal head", "Animal legs", "Animal mouth", "Animal skin", "Animal-form",
+        "Ages", "Attracts birds", "Child-form", "Corpulence", "Covered in hair", "Animal arms",
+        "Cyclops", "Extra arms", "Extra eyes", "Extra legs", "Forked tongue", "Gender swap",
+        "Hunchback", "Monster Trait", "Shrinks", "Item-form", "No eyes", "Shrivels",
+        "Long arms", "No mouth", "Skin boils", "Loses teeth", "P. Element-skin", "Slime trail",
+        "Monster Feature", "Second face", "Translucent skin", "Sheds skin", "Weeps blood"
+    ],
+    
+    insanities: [
+        "Always lies", "Always polite", '"Animal-form"', "Cannot count", "Cannot lie", "Faceblind",
+        "Fears birds", "Fears blood", "Fears books", "Fears darkness", "Fears fire", "Fears gold",
+        "Fears horses", "Fears iron", "Fears music", "Fears own hand", "Fears PC", "Fears rain",
+        "Fears rivers", "Fears silence", "Fears sleep", "Fears sunlight", "Fears the moon", "Fears trees",
+        '"Genius"', '"Gorgeous"', "Hates violence", '"Invisible"', '"Invulnerable"', '"Mon. Ability"',
+        '"Mon. Feature"', '"Monster Trait"', "Must sing", "New Personality", "Says thoughts", "Sees dead people"
+    ],
+    
+    hazards: [
+        { name: "Danger", desc: "One or more threatening enemies descend upon the party." },
+        { name: "Encounter", desc: "Someone or something finds the party. Determine their disposition." },
+        { name: "Clue", desc: "The party hears, smells, sees, or finds evidence of the next encounter." },
+        { name: "Expiration", desc: "Ongoing effects end, torches run out, lanterns need fuel, bellies rumble." },
+        { name: "Environment", desc: "The surrounding's state shifts or escalates in some way." },
+        { name: "Discovery", desc: "The party finds something interesting and possibly beneficial." }
+    ],
+    
+    ranks: ["Porcelain", "Copper", "Silver", "Gold", "Platinum", "Emerald", "Ruby", "Sapphire", "Pearl", "Diamond"],
+    
+    xpThresholds: [0, 2, 6, 12, 20, 30, 42, 56, 72, 90],
+    
+    spells: {
+        111: { name: "Acid Stomach", desc: "Anything you eat dissolves instantly." },
+        112: { name: "Adhere", desc: "Object is covered in extremely sticky slime." },
+        113: { name: "Anchor", desc: "A strong wire sprouts from your arms, affixing itself to two points within 25ft on each side." },
+        114: { name: "Animate Object", desc: "An object obeys your commands as best it can." },
+        115: { name: "Anthropomorphize", desc: "An animal either gains human intelligence or human appearance for one day." },
+        116: { name: "Arcane Eye", desc: "You can see through a magical floating eyeball that flies around at your command." },
+        121: { name: "Astral Prison", desc: "An object is frozen in time and space within an invulnerable crystal shell." },
+        122: { name: "Attract", desc: "Two objects are strongly magnetically attracted to each other if they come within 25ft." },
+        123: { name: "Babble", desc: "A creature must loudly and clearly repeat everything you think. It is otherwise mute." },
+        124: { name: "Bait Flower", desc: "A plant sprouts from the ground that emanates the smell of your choice." },
+        125: { name: "Beast Form", desc: "You and your possessions transform into a mundane animal." },
+        126: { name: "Befuddle", desc: "A creature of your choice is unable to form new short-term memories for the duration of the spell." },
+        131: { name: "Bless", desc: "You or a creature have enhanced attacks." },
+        132: { name: "Bird Wings", desc: "Your arms turn into large bird wings." },
+        133: { name: "Body Swap", desc: "You switch bodies with a creature you touch. If one body dies, the other dies as well." },
+        134: { name: "Change Weather", desc: "You may alter the type of weather at will, but you do not otherwise direct it." },
+        135: { name: "Charm", desc: "A creature you can see treats you as a friend." },
+        136: { name: "Comprehend", desc: "You become fluent in all languages for a short while." },
+        141: { name: "Command", desc: "A target obeys a single three-word command that does not harm it." },
+        142: { name: "Cone of Foam", desc: "Dense foam sprays from your hand, coating the target." },
+        143: { name: "Control Plants", desc: "Nearby plants and trees obey you and gain the ability to move at a slow pace." },
+        144: { name: "Cure Wounds", desc: "Restore 1d Health to a creature you touch." },
+        145: { name: "Deafen", desc: "All nearby creatures are deafened." },
+        146: { name: "Detect Magic", desc: "You can see or hear nearby magical auras." },
+        151: { name: "Disassemble", desc: "Any of your body parts may be detached and reattached at will, without causing pain or damage." },
+        152: { name: "Disguise", desc: "You may alter the appearance of one character at will as long as they remain humanoid." },
+        153: { name: "Displace", desc: "An object appears to be up to 15ft from its actual position." },
+        154: { name: "Earthquake", desc: "The ground begins shaking violently. Structures may be damaged or collapse." },
+        155: { name: "Elasticity", desc: "Your body can stretch up to 15ft." },
+        156: { name: "Elemental Wall", desc: "A straight wall of ice or fire 50ft long and 10ft high rises from the ground." },
+        161: { name: "Fear", desc: "A creature becomes terrified of a type of object or person of your choice." },
+        162: { name: "Filch", desc: "A visible item teleports to your hands." },
+        163: { name: "Flare", desc: "A bright ball of energy fires a trail of light into the sky, revealing your location." },
+        164: { name: "Fog Cloud", desc: "A dense fog spreads out from you." },
+        165: { name: "Frenzy", desc: "A nearby creature erupts in a frenzy of violence." },
+        166: { name: "Gate", desc: "A portal to a random plane opens." },
+        211: { name: "Ghost Sound", desc: "You create illusory sounds that seem to come from a direction of your choice." },
+        212: { name: "Gravity Shift", desc: "You can change the direction of gravity for yourself." },
+        213: { name: "Greed", desc: "A creature develops an overwhelming urge to possess a visible item of your choice." },
+        214: { name: "Haste", desc: "Your movement speed is tripled." },
+        215: { name: "Hatred", desc: "A creature develops a deep hatred of another creature or group." },
+        216: { name: "Hear Whispers", desc: "You can hear faint sounds clearly." },
+        221: { name: "Hover", desc: "An object hovers, frictionless, a few feet above the ground." },
+        222: { name: "Hypnotize", desc: "A creature enters a trance and will truthfully answer one yes or no question." },
+        223: { name: "Icy Touch", desc: "A thick ice layer spreads across a touched surface, up to 15ft in radius." },
+        224: { name: "Illuminate", desc: "A floating light moves as you command." },
+        225: { name: "Invisibility", desc: "You and all worn items cannot be seen for one minute." },
+        226: { name: "Invisible Tether", desc: "Two objects within 15ft of each other cannot be moved more than 15ft apart." },
+        231: { name: "Knock", desc: "A nearby mundane or magical lock unlocks – loudly." },
+        232: { name: "Leap", desc: "You jump up to 50ft, once." },
+        233: { name: "Liquid Air", desc: "The air around you becomes swimmable." },
+        234: { name: "Magic Dampener", desc: "All nearby magical effects have their effectiveness halved." },
+        235: { name: "Manse", desc: "A sturdy, furnished cottage appears for 12 hours." },
+        236: { name: "Magic Missile", desc: "You shoot an arcane missile that can seek its target around corners." },
+        241: { name: "Manipulate Gravity", desc: "The gravity in a circle with a radius of 50ft triples or is reduced to one-third." },
+        242: { name: "Marble Craze", desc: "Your pockets are full of marbles, and will refill every 6 seconds." },
+        243: { name: "Masquerade", desc: "A character's appearance and voice becomes identical to those of a character you touch." },
+        244: { name: "Miniaturize", desc: "A creature you touch is shrunk down to the size of a mouse." },
+        245: { name: "Mirror Image", desc: "An illusory duplicate of yourself appears and is under your control." },
+        246: { name: "Mirrorwalk", desc: "A mirror becomes a gateway to another mirrored surface that you looked into today." },
+        251: { name: "Missile Shield", desc: "A creature you touch is protected from mundane missile attacks." },
+        252: { name: "Multiarm", desc: "You gain an extra arm." },
+        253: { name: "Night Sphere", desc: "A 50ft wide sphere of darkness displaying the night sky appears before you." },
+        254: { name: "Null Magic", desc: "You counter a spell or negate a magical effect." },
+        255: { name: "Objectify", desc: "You become any inanimate object between the size of a grand piano and an apple." },
+        256: { name: "Ooze Form", desc: "You become a living jelly." },
+        261: { name: "Pacify", desc: "A creature near you has an aversion to violence." },
+        262: { name: "Pit", desc: "A pit up to 15ft wide and 15ft deep opens in the ground." },
+        263: { name: "Primal Surge", desc: "A creature rapidly evolves into a mutated version of its species." },
+        264: { name: "Push/Pull", desc: "An object is pulled towards/pushed away from you with the strength of three men." },
+        265: { name: "Raise Dead", desc: "A skeleton rises from the ground to serve you. They are incredibly stupid." },
+        266: { name: "Ray of Frost", desc: "A creature or object is encased in ice." },
+        311: { name: "Read Mind", desc: "You can hear the surface thoughts of nearby creatures." },
+        312: { name: "Repel", desc: "Two objects are strongly magnetically repelled from each other if they come within 15ft." },
+        313: { name: "Scry", desc: "You can see through the eyes of a creature you touched earlier today." },
+        314: { name: "Sculpt Elements", desc: "All inanimate material behaves like clay in your hands." },
+        315: { name: "Shroud", desc: "All creatures around you are invisible until they move." },
+        316: { name: "Shuffle", desc: "Two creatures you can see instantly switch places." },
+        321: { name: "Sleep", desc: "A creature you can see falls into a light sleep." },
+        322: { name: "Slick", desc: "Every surface in a 50ft radius becomes frictionless and slippery." },
+        323: { name: "Smoke Form", desc: "Your body becomes living smoke." },
+        324: { name: "Snail Knight", desc: "A knight on a giant snail arrives to answer questions about quests and chivalry." },
+        325: { name: "Sniff", desc: "You can smell even the faintest traces of scents." },
+        326: { name: "Sort", desc: "Inanimate items sort themselves according to categories you set." },
+        331: { name: "Spark", desc: "You create a blinding light followed by a frighteningly loud boom." },
+        332: { name: "Speak with Dead", desc: "The spirit of a dead body rises and will answer three questions truthfully." },
+        333: { name: "Spider Climb", desc: "You can climb surfaces like a spider." },
+        334: { name: "Stoneskin", desc: "A creature's skin becomes solid rock." },
+        335: { name: "Switcheroo", desc: "You swap places with a creature." },
+        336: { name: "Summon Cube", desc: "Once per second you may summon or banish a 5-foot-wide cube of earth." },
+        341: { name: "Summon Idol", desc: "A carved stone statue the size of a mule rises from the ground." },
+        342: { name: "Swarm", desc: "You become a swarm of crows, rats, or piranhas." },
+        343: { name: "Telekinesis", desc: "You may mentally move 1 item under 60lbs." },
+        344: { name: "Telepathy", desc: "Two creatures can hear each other's thoughts, no matter how far apart." },
+        345: { name: "Teleport", desc: "An object or person you can see is transported from one place to another in a 50ft radius." },
+        346: { name: "Thicket", desc: "A thicket of trees and dense brush up to 50ft wide suddenly sprouts up." },
+        351: { name: "Time Rush", desc: "Time in a bubble with a 25ft radius starts moving two times faster." },
+        352: { name: "Time Slow", desc: "Time in a bubble with a 25ft radius starts moving two times slower." },
+        353: { name: "Tristan", desc: "A benign, ordinary, average man appears until end of spell. He will obey polite commands." },
+        354: { name: "True Sight", desc: "You see through all nearby illusions." },
+        355: { name: "Upwell", desc: "A spring of seawater appears." },
+        356: { name: "Vision", desc: "You completely control what a creature sees." },
+        361: { name: "Visual Illusion", desc: "A silent, immobile, room-sized illusion of your choice appears." },
+        362: { name: "Ward", desc: "A silver circle 50ft across appears. Choose one species that cannot cross it." },
+        363: { name: "Web", desc: "Your wrists shoot thick webbing." },
+        364: { name: "X-Ray Vision", desc: "You can see through walls, dirt, clothing, etc." },
+        365: { name: "Wizard Mark", desc: "Your finger shoots ulfire-colored paint visible only to you at any distance." },
+        366: { name: "Zone of Truth", desc: "All creatures in a 50ft bubble are compelled to speak the truth." }
+    }
+};
+
+        // ============ CHARACTER STATE ============
+        let character = {
+            name: "",
+            level: 1,
+            xp: 0,
+            str: 0,
+            dex: 0,
+            wil: 0,
+            maxHealth: 6,
+            currentHealth: 6,
+            armor: 6,
+            archetype: "",
+            features: [],
+            weapons: [],
+            items: [],
+            goal: "",
+            relationship: "",
+            background: "",
+            spells: [],
+            essence: 0,
+            maxEssence: 2,
+            prayers: 0,
+            maxPrayers: 3,
+            quintessence: [],
+            implement: "",
+            domain: "",
+            signatureWeapon: "",
+            signatureEnhancements: [],
+            path: "",
+            scars: []
+        };
+
+        let combatLog = [];
+        let rollHistory = [];
+
+        // ============ UTILITY FUNCTIONS ============
+        function roll(sides) {
+            return Math.floor(Math.random() * sides) + 1;
+        }
+
+        function rollMultiple(count, sides) {
+            const results = [];
+            for (let i = 0; i < count; i++) {
+                results.push(roll(sides));
+            }
+            return results;
+        }
+
+        function pick(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // ============ CHARACTER SHEET FUNCTIONS ============
+        function updateDisplay() {
+            document.getElementById('display-name').textContent = character.name || '-';
+            document.getElementById('display-level').textContent = character.level;
+            document.getElementById('display-xp').textContent = character.xp;
+            document.getElementById('display-archetype').textContent = character.archetype || '-';
+            document.getElementById('display-str').textContent = (character.str >= 0 ? '+' : '') + character.str;
+            document.getElementById('display-dex').textContent = (character.dex >= 0 ? '+' : '') + character.dex;
+            document.getElementById('display-wil').textContent = (character.wil >= 0 ? '+' : '') + character.wil;
+            document.getElementById('display-armor').textContent = character.armor;
+            document.getElementById('display-essence').textContent = character.essence;
+            document.getElementById('display-max-essence').textContent = character.maxEssence;
+            
+            // Health bar
+            const healthPercent = Math.max(0, (character.currentHealth / character.maxHealth) * 100);
+            document.getElementById('health-bar-fill').style.width = healthPercent + '%';
+            document.getElementById('health-display').textContent = `${character.currentHealth}/${character.maxHealth}`;
+            
+            // Weapons
+            const weaponsList = document.getElementById('weapons-list');
+            weaponsList.innerHTML = character.weapons.map(w => `<div class="item"><span>${w}</span></div>`).join('') || '<p>No weapons</p>';
+            
+            // Inventory
+            const inventoryList = document.getElementById('inventory-list');
+            inventoryList.innerHTML = character.items.map((item, i) => `
+                <div class="item">
+                    <span>${item.name} (${item.location})</span>
+                    <button class="btn-small btn-danger" onclick="removeItem(${i})">×</button>
+                </div>
+            `).join('') || '<p>No items</p>';
+            
+            // Features
+            const featuresList = document.getElementById('features-list');
+            featuresList.innerHTML = character.features.map(f => `<div class="item"><span>${f}</span></div>`).join('') || '<p>No features</p>';
+            
+            // Details
+            document.getElementById('display-goal').textContent = character.goal || '-';
+            document.getElementById('display-relationship').textContent = character.relationship || '-';
+            document.getElementById('display-background').textContent = character.background || '-';
+            
+            // Scars
+            const scarsList = document.getElementById('scars-list');
+            scarsList.innerHTML = character.scars.map(s => `<div class="item"><span>${s}</span></div>`).join('') || '<p>No scars</p>';
+            
+            // Spells
+            const memorizedSpells = document.getElementById('memorized-spells');
+            memorizedSpells.innerHTML = character.spells.map((s, i) => `
+                <div class="item">
+                    <span><strong>${s.name}:</strong> ${s.desc}</span>
+                    <button class="btn-small" onclick="castSpell(${i})">Cast</button>
+                </div>
+            `).join('') || '<p>No spells memorized</p>';
+            
+            // Quintessence
+            const quintList = document.getElementById('quintessence-list');
+            quintList.innerHTML = character.quintessence.map(q => `<div class="item"><span>${q}</span></div>`).join('') || '<p>No quintessence</p>';
+        }
+
+        function modifyHealth(amount) {
+            character.currentHealth = Math.max(0, Math.min(character.maxHealth, character.currentHealth + amount));
+            if (character.currentHealth === 0) {
+                alert('Character is at 0 HP! Roll for a Scar in the Combat tab.');
+            }
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function fullHeal() {
+            character.currentHealth = character.maxHealth;
+            updateDisplay();
+            saveCharacter();
+            logCombat('Full rest - Health restored to maximum');
+        }
+
+        function useMedicine() {
+            const medIdx = character.items.findIndex(i => i.name.toLowerCase().includes('medicine'));
+            if (medIdx === -1) {
+                alert('No medicine in inventory!');
+                return;
+            }
+            modifyHealth(1);
+            // Reduce medicine count or remove
+            character.items.splice(medIdx, 1);
+            updateDisplay();
+            logCombat('Used medicine - Restored 1 HP');
+        }
+
+        function addItem() {
+            const name = document.getElementById('new-item').value.trim();
+            const location = document.getElementById('item-location').value;
+            if (!name) return;
+            
+            // Check capacity
+            const beltItems = character.items.filter(i => i.location === 'belt').length;
+            const backpackItems = character.items.filter(i => i.location === 'backpack').length;
+            
+            if (location === 'belt' && beltItems >= 2) {
+                alert('Belt can only hold 2 items!');
+                return;
+            }
+            if (location === 'backpack' && backpackItems >= 6) {
+                alert('Backpack can only hold 6 items!');
+                return;
+            }
+            
+            character.items.push({ name, location });
+            document.getElementById('new-item').value = '';
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function removeItem(index) {
+            character.items.splice(index, 1);
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function addXP(amount) {
+            character.xp += amount;
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function checkLevelUp() {
+            const xpThresholds = [0, 2, 6, 12, 20, 30, 42, 56, 72, 90];
+            const ranks = ['Porcelain', 'Copper', 'Silver', 'Gold', 'Platinum', 'Emerald', 'Ruby', 'Sapphire', 'Pearl', 'Diamond'];
+            
+            let newLevel = 1;
+            for (let i = 0; i < xpThresholds.length; i++) {
+                if (character.xp >= xpThresholds[i]) {
+                    newLevel = i + 1;
+                }
+            }
+            
+            if (newLevel > character.level) {
+                const oldLevel = character.level;
+                character.level = newLevel;
+                const gain = newLevel % 2 === 0 ? '+1 to an ability' : '+1 feature';
+                alert(`Level Up! ${oldLevel} → ${newLevel} (${ranks[newLevel-1]})\nYou gain: ${gain}`);
+                
+                // Auto-increase max health if STR ability was increased
+                character.maxHealth = 6 + character.str;
+            }
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function populateSelect(selectId, options) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = ''; // Clear any existing options
+    
+    options.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+    });
+}
+
+        // ============ CHARACTER CREATION ============
+        function rollAbilities() {
+            const row = pick(TABLES.abilities);
+            document.getElementById('create-str').value = row.str;
+            document.getElementById('create-dex').value = row.dex;
+            document.getElementById('create-wil').value = row.wil;
+        }
+
+        function randomName(gender) {
+            const firstName = gender === 'male' ? pick(TABLES.maleNames) : pick(TABLES.femaleNames);
+            const surname = Math.random() > 0.5 ? pick(TABLES.lowerSurnames) : pick(TABLES.upperSurnames);
+            document.getElementById('char-name').value = firstName + ' ' + surname;
+        }
+
+        function updateArchetypeOptions() {
+            const archetype = document.getElementById('create-archetype').value;
+            const optionsDiv = document.getElementById('archetype-options');
+            
+            if (!archetype) {
+                optionsDiv.style.display = 'none';
+                return;
+            }
+            
+            optionsDiv.style.display = 'block';
+            
+            if (archetype === 'mage') {
+                optionsDiv.innerHTML = `
+                    <h4>Mage Options</h4>
+                    <label>Implement:</label>
+                    <select id="mage-implement">
+                        ${TABLES.implements.map(i => `<option value="${i}">${i}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="document.getElementById('mage-implement').value=pick(TABLES.implements)">🎲</button>
+                    <label>Quintessence (Element or Form):</label>
+                    <select id="mage-quint">
+                        ${[...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms].map(q => `<option value="${q}">${q}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="randomQuintessence()">🎲</button>
+                `;
+            } else if (archetype === 'disciple') {
+                optionsDiv.innerHTML = `
+                    <h4>Disciple Options</h4>
+                    <label>Favored Domain:</label>
+                    <select id="disciple-domain">
+                        ${TABLES.domains.map(d => `<option value="${d}">${d}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="document.getElementById('disciple-domain').value=pick(TABLES.domains)">🎲</button>
+                    <p><strong>Miracles:</strong> Protection, Light, Purify, Dominion</p>
+                `;
+            } else if (archetype === 'vagabond') {
+                optionsDiv.innerHTML = `
+                    <h4>Vagabond Options</h4>
+                    <label>Signature Weapon:</label>
+                    <select id="vagabond-weapon">
+                        ${TABLES.vagabondWeapons.map(w => `<option value="${w}">${w}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="document.getElementById('vagabond-weapon').value=pick(TABLES.vagabondWeapons)">🎲</button>
+                    <label>Enhancement (Effect or Element):</label>
+                    <select id="vagabond-enhance">
+                        ${[...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements].map(e => `<option value="${e}">${e}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="randomEnhancement()">🎲</button>
+                    <label>Path:</label>
+                    <select id="vagabond-path">
+                        ${TABLES.paths.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                    <button class="btn-small" onclick="document.getElementById('vagabond-path').value=pick(TABLES.paths)">🎲</button>
+                `;
+            }
+        }
+
+        function randomQuintessence() {
+            const all = [...TABLES.physicalElements, ...TABLES.etherealElements, ...TABLES.physicalForms, ...TABLES.etherealForms];
+            document.getElementById('mage-quint').value = pick(all);
+        }
+
+        function randomEnhancement() {
+            const all = [...TABLES.physicalEffects, ...TABLES.etherealEffects, ...TABLES.physicalElements, ...TABLES.etherealElements];
+            document.getElementById('vagabond-enhance').value = pick(all);
+        }
+
+        function randomWeaponPackage() {
+            document.getElementById('create-weapons').value = Math.floor(Math.random() * TABLES.weaponPackages.length);
+        }
+
+        function randomTools() {
+            document.getElementById('create-tool1').value = pick(TABLES.tools);
+            document.getElementById('create-tool2').value = pick(TABLES.tools);
+        }
+
+        function randomItems() {
+            document.getElementById('create-item1').value = pick(TABLES.items);
+            document.getElementById('create-item2').value = pick(TABLES.items);
+        }
+
+        function randomGoal() {
+            document.getElementById('create-goal').value = pick(TABLES.goals);
+        }
+
+        function randomRelationship() {
+            document.getElementById('create-relationship').value = pick(TABLES.relationships);
+        }
+
+        function randomBackground() {
+            const bg = pick(TABLES.backgrounds);
+            document.getElementById('create-background').value = bg.name;
+        }
+
+        function createCharacter() {
+            const name = document.getElementById('char-name').value.trim();
+            if (!name) {
+                alert('Please enter a character name!');
+                return;
+            }
+            
+            const str = parseInt(document.getElementById('create-str').value) || 0;
+            const dex = parseInt(document.getElementById('create-dex').value) || 0;
+            const wil = parseInt(document.getElementById('create-wil').value) || 0;
+            const archetype = document.getElementById('create-archetype').value;
+            
+            const weaponPkg = TABLES.weaponPackages[parseInt(document.getElementById('create-weapons').value)];
+            const tool1 = document.getElementById('create-tool1').value;
+            const tool2 = document.getElementById('create-tool2').value;
+            const item1 = document.getElementById('create-item1').value;
+            const item2 = document.getElementById('create-item2').value;
+            const goal = document.getElementById('create-goal').value;
+            const relationship = document.getElementById('create-relationship').value;
+            const background = document.getElementById('create-background').value;
+            
+            character = {
+                name: name,
+                level: 1,
+                xp: 0,
+                str: str,
+                dex: dex,
+                wil: wil,
+                maxHealth: 6 + str,
+                currentHealth: 6 + str,
+                armor: weaponPkg.armor,
+                archetype: archetype,
+                features: [],
+                weapons: [...weaponPkg.items],
+                items: [
+                    { name: tool1, location: 'backpack' },
+                    { name: tool2, location: 'backpack' },
+                    { name: item1, location: 'backpack' },
+                    { name: item2, location: 'backpack' }
+                ],
+                goal: goal,
+                relationship: relationship,
+                background: background,
+                spells: [],
+                essence: 0,
+                maxEssence: 2,
+                prayers: 0,
+                maxPrayers: 3,
+                quintessence: [],
+                implement: '',
+                domain: '',
+                signatureWeapon: '',
+                signatureEnhancements: [],
+                path: '',
+                scars: []
+            };
+            
+            // Add archetype-specific stuff
+            if (archetype === 'mage') {
+                character.implement = document.getElementById('mage-implement')?.value || pick(TABLES.implements);
+                character.quintessence = [document.getElementById('mage-quint')?.value || pick(TABLES.physicalElements)];
+                character.essence = 2;
+                character.features.push(`Implement: ${character.implement}`);
+                character.features.push(`Quintessence: ${character.quintessence.join(', ')}`);
+                // Generate 2 starting spells
+                character.spells = [generateRandomSpell(), generateRandomSpell()];
+            } else if (archetype === 'disciple') {
+                character.domain = document.getElementById('disciple-domain')?.value || pick(TABLES.domains);
+                character.prayers = 3;
+                character.features.push(`Domain: ${character.domain}`);
+                character.features.push('Miracles: Protection, Light, Purify, Dominion');
+            } else if (archetype === 'vagabond') {
+                character.signatureWeapon = document.getElementById('vagabond-weapon')?.value || pick(TABLES.vagabondWeapons);
+                character.signatureEnhancements = [document.getElementById('vagabond-enhance')?.value || pick(TABLES.physicalEffects)];
+                character.path = document.getElementById('vagabond-path')?.value || pick(TABLES.paths);
+                character.features.push(`Signature Weapon: ${character.signatureWeapon} (${character.signatureEnhancements.join(', ')})`);
+                character.features.push(`Path: ${character.path}`);
+            }
+            
+            // Add background items
+            const bgData = TABLES.backgrounds.find(b => b.name === background);
+            if (bgData) {
+                bgData.items.forEach(item => {
+                    character.items.push({ name: item, location: 'backpack' });
+                });
+            }
+            
+            updateDisplay();
+            saveCharacter();
+            showTab('character');
+            alert('Character created successfully!');
+        }
+
+        // ============ SPELLS ============
+        function generateRandomSpell() {
+            const effect = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+            const element = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
+            const form = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
+            
+            const name = `${effect} ${element} ${form}`;
+            const desc = `A spell combining ${effect.toLowerCase()} energy with ${element.toLowerCase()} in the shape of a ${form.toLowerCase()}.`;
+            
+            return { name, desc };
+        }
+
+        function generateSpell() {
+            const spell = generateRandomSpell();
+            const resultDiv = document.getElementById('generated-spell');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <h4>${spell.name}</h4>
+                <p>${spell.desc}</p>
+                <button onclick="addSpellToCharacter('${spell.name}', '${spell.desc}')">Add to Memorized Spells</button>
+            `;
+        }
+
+        function generateSpellFromTable() {
+            const d1 = Math.ceil(roll(6) / 2);
+            const d2 = roll(6);
+            const d3 = roll(6);
+            const code = d1 * 100 + d2 * 10 + d3;
+            
+            let spell = TABLES.spells[code];
+            if (!spell) {
+                spell = { name: `Unknown Spell (${code})`, desc: "A mysterious spell lost to time." };
+            }
+            
+            const resultDiv = document.getElementById('generated-spell');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <h4>${spell.name}</h4>
+                <p>Rolled: ${d1}-${d2}-${d3} = ${code}</p>
+                <p>${spell.desc}</p>
+                <button onclick="addSpellToCharacter('${spell.name}', \`${spell.desc}\`)">Add to Memorized Spells</button>
+            `;
+        }
+
+        function addSpellToCharacter(name, desc) {
+            character.spells.push({ name, desc });
+            updateDisplay();
+            saveCharacter();
+            alert('Spell added!');
+        }
+
+        function conductRitual() {
+            if (character.archetype !== 'mage') {
+                alert('Only Mages can conduct rituals!');
+                return;
+            }
+            
+            character.spells = [generateRandomSpell(), generateRandomSpell()];
+            character.essence = character.maxEssence;
+            updateDisplay();
+            saveCharacter();
+            alert('Ritual complete! New spells memorized and essence restored.');
+        }
+
+        function castSpell(index) {
+            if (character.essence <= 0) {
+                alert('No essence remaining! Conduct a ritual to restore.');
+                return;
+            }
+            character.essence--;
+            logCombat(`Cast spell: ${character.spells[index].name}`);
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function modifyEssence(amount) {
+            character.essence = Math.max(0, Math.min(character.maxEssence, character.essence + amount));
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function rollComponent(type) {
+            let result = '';
+            if (type === 'effect') {
+                result = pick([...TABLES.physicalEffects, ...TABLES.etherealEffects]);
+            } else if (type === 'element') {
+                result = pick([...TABLES.physicalElements, ...TABLES.etherealElements]);
+            } else if (type === 'form') {
+                result = pick([...TABLES.physicalForms, ...TABLES.etherealForms]);
+            }
+            
+            const resultDiv = document.getElementById('component-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="dice">${type.toUpperCase()}</div><div class="total">${result}</div>`;
+        }
+
+        // ============ COMBAT ============
+        function rollAttack() {
+            const weaponAB = parseInt(document.getElementById('weapon-type').value);
+            const targetArmor = parseInt(document.getElementById('target-armor').value);
+            const hasAdvantage = document.getElementById('has-advantage').checked;
+            
+            let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
+            let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
+            let diceTotal = kept.reduce((a, b) => a + b, 0);
+            let total = diceTotal + weaponAB;
+            
+            let hit = total > targetArmor;
+            let damage = hit ? total - targetArmor : 0;
+            
+            const resultDiv = document.getElementById('attack-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
+                <div class="total">${diceTotal} + ${weaponAB} AB = <strong>${total}</strong> vs Armor ${targetArmor}</div>
+                <div class="${hit ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${hit ? `HIT! ${damage} damage` : 'MISS!'}
+                </div>
+            `;
+            
+            logCombat(`Attack: ${dice.join('+')}${hasAdvantage ? '(adv)' : ''} + ${weaponAB} = ${total} vs ${targetArmor} → ${hit ? damage + ' damage' : 'miss'}`);
+        }
+
+        function calculateDamage() {
+            const incoming = parseInt(document.getElementById('incoming-attack').value);
+            const armor = character.armor;
+            
+            let damage = Math.max(0, incoming - armor);
+            
+            const resultDiv = document.getElementById('damage-result');
+            resultDiv.style.display = 'block';
+            
+            if (damage > 0) {
+                character.currentHealth -= damage;
+                resultDiv.innerHTML = `
+                    <div class="failure" style="font-size:24px;">
+                        ${incoming} - ${armor} armor = <strong>${damage} damage taken!</strong>
+                    </div>
+                    <div>Current Health: ${character.currentHealth}/${character.maxHealth}</div>
+                `;
+                if (character.currentHealth <= 0) {
+                    resultDiv.innerHTML += `<div class="failure" style="margin-top:10px;">⚠️ AT 0 HP - Roll for Scar!</div>`;
+                }
+                logCombat(`Took ${damage} damage (${incoming} - ${armor} armor). HP: ${character.currentHealth}/${character.maxHealth}`);
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="success" style="font-size:24px;">
+                        Attack blocked! (${incoming} vs ${armor} armor)
+                    </div>
+                `;
+                logCombat(`Blocked attack (${incoming} vs ${armor} armor)`);
+            }
+            
+            updateDisplay();
+            saveCharacter();
+        }
+
+        function rollInitiative() {
+            const dice = rollMultiple(2, 6);
+            const total = dice.reduce((a, b) => a + b, 0) + character.dex;
+            const success = total >= 10;
+            
+            const resultDiv = document.getElementById('initiative-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${dice.join('] [')}]</div>
+                <div class="total">${dice.reduce((a,b)=>a+b,0)} + ${character.dex} DEX = <strong>${total}</strong></div>
+                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${success ? 'Go First!' : 'Go After Enemies'}
+                </div>
+            `;
+            
+            logCombat(`Initiative: ${total} → ${success ? 'Go first' : 'Go after enemies'}`);
+        }
+
+        function rollScar() {
+            const result = roll(6);
+            const scar = TABLES.scars[result - 1];
+            
+            character.scars.push(scar);
+            
+            // Apply scar effects
+            if (result === 2) {
+                // Broken - reduce an ability
+                const abilities = ['str', 'dex', 'wil'];
+                const reduced = pick(abilities);
+                character[reduced]--;
+                alert(`Broken! ${reduced.toUpperCase()} reduced by 1.`);
+            } else if (result === 3) {
+                // Maimed - reduce max health
+                character.maxHealth--;
+                alert('Maimed! Max Health reduced by 1.');
+            } else if (result === 5) {
+                // Twisted - mutation
+                const mutation = pick(TABLES.mutations);
+                character.scars.push(`Mutation: ${mutation}`);
+            } else if (result === 6) {
+                // Splintered - insanity
+                const insanity = pick(TABLES.insanities);
+                character.scars.push(`Insanity: ${insanity}`);
+            }
+            
+            const resultDiv = document.getElementById('scar-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${result}]</div>
+                <div class="failure" style="font-size:18px; margin-top:10px;">${scar}</div>
+            `;
+            
+            updateDisplay();
+            saveCharacter();
+            logCombat(`Scar rolled: ${scar}`);
+        }
+
+        function logCombat(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            combatLog.unshift(`[${timestamp}] ${message}`);
+            if (combatLog.length > 50) combatLog.pop();
+            
+            document.getElementById('combat-log').innerHTML = combatLog.map(l => `<div class="log-entry">${l}</div>`).join('');
+        }
+
+        function clearCombatLog() {
+            combatLog = [];
+            document.getElementById('combat-log').innerHTML = '';
+        }
+
+        // ============ DICE ROLLER ============
+        function quickRoll(count, sides) {
+            const dice = rollMultiple(count, sides);
+            const total = dice.reduce((a, b) => a + b, 0);
+            
+            addToRollHistory(`${count}d${sides}: [${dice.join('] [')}] = ${total}`);
+        }
+
+        function rollDanger() {
+            const ability = document.getElementById('danger-ability').value;
+            const hasAdvantage = document.getElementById('danger-advantage').checked;
+            const abilityValue = character[ability];
+            
+            let dice = hasAdvantage ? rollMultiple(3, 6) : rollMultiple(2, 6);
+            let kept = hasAdvantage ? dice.sort((a,b) => b-a).slice(0, 2) : dice;
+            let diceTotal = kept.reduce((a, b) => a + b, 0);
+            let total = diceTotal + abilityValue;
+            let success = total >= 10;
+            
+            const resultDiv = document.getElementById('danger-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${dice.join('] [')}]${hasAdvantage ? ' (kept ' + kept.join(', ') + ')' : ''}</div>
+                <div class="total">${diceTotal} + ${abilityValue} ${ability.toUpperCase()} = <strong>${total}</strong></div>
+                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${success ? 'SUCCESS!' : 'FAILURE!'}
+                </div>
+            `;
+            
+            addToRollHistory(`Danger (${ability.toUpperCase()}): ${total} → ${success ? 'Success' : 'Failure'}`);
+        }
+
+        function rollOpposed() {
+            const yourBonus = parseInt(document.getElementById('opposed-your-bonus').value) || 0;
+            const oppBonus = parseInt(document.getElementById('opposed-opp-bonus').value) || 0;
+            
+            const yourDice = rollMultiple(2, 6);
+            const oppDice = rollMultiple(2, 6);
+            const yourTotal = yourDice.reduce((a,b) => a+b, 0) + yourBonus;
+            const oppTotal = oppDice.reduce((a,b) => a+b, 0) + oppBonus;
+            
+            // Defender wins ties
+            const youWin = yourTotal > oppTotal;
+            
+            const resultDiv = document.getElementById('opposed-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div>You: [${yourDice.join('] [')}] + ${yourBonus} = <strong>${yourTotal}</strong></div>
+                <div>Opponent: [${oppDice.join('] [')}] + ${oppBonus} = <strong>${oppTotal}</strong></div>
+                <div class="${youWin ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${youWin ? 'You Win!' : 'Opponent Wins!'}
+                </div>
+            `;
+            
+            addToRollHistory(`Opposed: ${yourTotal} vs ${oppTotal} → ${youWin ? 'You win' : 'Opponent wins'}`);
+        }
+
+        function rollBarter() {
+            const quality = parseInt(document.getElementById('barter-quality').value) || 0;
+            const dice = rollMultiple(2, 6);
+            const total = dice.reduce((a,b) => a+b, 0) + character.wil;
+            const success = total >= 10;
+            const resultQuality = success ? quality : Math.max(0, quality - 1);
+            
+            const resultDiv = document.getElementById('barter-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${dice.join('] [')}]</div>
+                <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${character.wil} WIL = <strong>${total}</strong></div>
+                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${success ? `Equal Trade! (Quality ${resultQuality})` : `Lower Quality Trade (Quality ${resultQuality})`}
+                </div>
+            `;
+            
+            addToRollHistory(`Barter: ${total} → Quality ${resultQuality} item`);
+        }
+
+        function addToRollHistory(message) {
+            rollHistory.unshift(message);
+            if (rollHistory.length > 20) rollHistory.pop();
+            document.getElementById('roll-history').innerHTML = rollHistory.map(r => `<div class="item"><span>${r}</span></div>`).join('');
+        }
+
+        function clearRollHistory() {
+            rollHistory = [];
+            document.getElementById('roll-history').innerHTML = '';
+        }
+
+        // ============ EXPLORATION ============
+        function rollHazard() {
+            const result = roll(6);
+            const hazard = TABLES.hazards[result - 1];
+            
+            const resultDiv = document.getElementById('hazard-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${result}]</div>
+                <div style="font-size:20px; margin-top:10px;"><strong>${hazard.name}</strong></div>
+                <div>${hazard.desc}</div>
+            `;
+        }
+
+        function rollMorale() {
+            const npcWil = parseInt(document.getElementById('morale-wil').value) || 0;
+            const dice = rollMultiple(2, 6);
+            const total = dice.reduce((a,b) => a+b, 0) + npcWil;
+            const success = total >= 10;
+            
+            const resultDiv = document.getElementById('morale-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="dice">[${dice.join('] [')}]</div>
+                <div class="total">${dice.reduce((a,b) => a+b, 0)} + ${npcWil} WIL = <strong>${total}</strong></div>
+                <div class="${success ? 'success' : 'failure'}" style="font-size:24px; margin-top:10px;">
+                    ${success ? 'NPC Holds!' : 'NPC Routs/Begs for Mercy!'}
+                </div>
+            `;
+        }
+
+        function awardSessionXP() {
+            const checks = document.querySelectorAll('.xp-check:checked');
+            const xp = checks.length;
+            if (xp > 0) {
+                addXP(xp);
+                alert(`Awarded ${xp} XP!`);
+                checks.forEach(c => c.checked = false);
+            } else {
+                alert('No XP to award - check the boxes for "yes" answers first!');
+            }
+        }
+
+        // ============ SAVE/LOAD ============
+        function saveCharacter() {
+            localStorage.setItem('islandRatsCharacter', JSON.stringify(character));
+        }
+
+        function loadCharacter() {
+            const saved = localStorage.getItem('islandRatsCharacter');
+            if (saved) {
+                character = JSON.parse(saved);
+                updateDisplay();
+            }
+        }
+
+        function deleteCharacter() {
+            if (confirm('Are you sure you want to delete this character? This cannot be undone!')) {
+                localStorage.removeItem('islandRatsCharacter');
+                character = {
+                    name: "", level: 1, xp: 0, str: 0, dex: 0, wil: 0,
+                    maxHealth: 6, currentHealth: 6, armor: 6, archetype: "",
+                    features: [], weapons: [], items: [], goal: "",
+                    relationship: "", background: "", spells: [],
+                    essence: 0, maxEssence: 2, prayers: 0, maxPrayers: 3,
+                    quintessence: [], implement: "", domain: "",
+                    signatureWeapon: "", signatureEnhancements: [],
+                    path: "", scars: []
+                };
+                updateDisplay();
+                alert('Character deleted.');
+            }
+        }
+
+        function exportCharacter() {
+            const data = JSON.stringify(character, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${character.name || 'character'}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function populateDropdown(selectId, dataArray, valueProperty = 'name') {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        console.error(`Select element with id "${selectId}" not found`);
+        return;
+    }
+
+    // Clear existing options (except maybe a placeholder if you want one)
+    select.innerHTML = '';
+
+    dataArray.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = valueProperty ? item[valueProperty] : index;
+        option.textContent = item.name;
+        select.appendChild(option);
+    });
+}
+
+        // ============ INITIALIZATION ============
+        loadCharacter();
+        updateDisplay();
+        function initDropdowns() {
+            populateSelect('create-tool1', TABLES.tools);
+            populateSelect('create-tool2', TABLES.tools);
+            populateSelect('create-item1', TABLES.items);
+            populateSelect('create-item2', TABLES.items);
+            populateDropdown('create-weapons', TABLES.weaponPackages, valueProperty=false);
+            populateSelect('create-goal', TABLES.goals);
+            populateSelect('create-relationship', TABLES.relationships);
+            populateDropdown('create-background', TABLES.backgrounds); 
+        }
+
+// Call when page loads
+document.addEventListener('DOMContentLoaded', initDropdowns);
+    </script>
+</body>
+</html>
