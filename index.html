@@ -1518,9 +1518,7 @@ function updateFeatureSelectionPanel() {
     const earnedFeatures = featureLevels.filter(l => character.level >= l).length;
     const usedFeatures = countUsedArchetypeFeatures();
     
-    // TODO revert this hack
-    // const availableFeatures = earnedFeatures - usedFeatures;
-    const availableFeatures = 9999;
+    const availableFeatures = earnedFeatures - usedFeatures;
     
     if (availableFeatures <= 0 || !character.archetype) {
         featurePanel.innerHTML = '<p>No feature slots available.</p>';
