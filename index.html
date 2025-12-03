@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Island Rats Character Manager</title>
     <style>
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
@@ -29,7 +30,7 @@
         .btn-success { background: #44bd32; }
         .row { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
         .col { flex: 1; min-width: 200px; }
-        .item-list { background: #0f3460; padding: 10px; border-radius: 5px; margin: 10px 0; max-height: 200px; overflow-y: auto; }
+        .item-list { background: #0f3460; padding: 10px; border-radius: 5px; margin: 10px 0; max-height: 400px; overflow-y: auto; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #1a1a2e; }
         .item:last-child { border-bottom: none; }
         .spell-card { background: #0f3460; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #e94560; }
@@ -253,7 +254,7 @@
             <div class="row">
                 <button onclick="modifyHealth(-1)" class="btn-danger">-1 HP</button>
                 <button onclick="modifyHealth(1)" class="btn-success">+1 HP</button>
-                <button onclick="fullHeal()" class="btn-success">Full Heal</button>
+                <button onclick="fullHeal()" class="btn-success">Rest (Full Heal)</button>
                 <button onclick="useMedicine()">Use Medicine (+1 HP)</button>
             </div>
 
@@ -275,6 +276,9 @@
                     <div class="value" id="display-armor">6</div>
                 </div>
             </div>
+
+            <h3>Miracles</h3>
+            <div class="item-list" id="miracles-list"></div>
 
             <h3>Weapons & Equipment</h3>
             <div class="item-list" id="weapons-list"></div>
@@ -346,7 +350,7 @@
             </div>
 
             <h3>3. Archetype</h3>
-            <select id="create-archetype" onchange="updateArchetypeOptions()">
+            <select autocomplete="off" id="create-archetype" onchange="updateArchetypeOptions()">
                 <option value="" selected>Select Archetype...</option>
                 <option value="mage">Mage</option>
                 <option value="disciple">Disciple</option>
@@ -1167,6 +1171,10 @@ function pick(array) {
 }
 
 function showTab(tabId) {
+    const baseUrl = window.location.href.split('#')[0];
+    const newHash = `#${tabId}`;
+    history.replaceState(null, '', baseUrl + newHash);
+
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
@@ -1282,7 +1290,6 @@ function updateMiraclesDisplay() {
     let miraclesHtml = `
         <div class="prayers-display">
             <strong>Prayers:</strong> ${character.prayers}/${character.maxPrayers}
-            <button class="btn-small" onclick="usePrayer()">Use Prayer</button>
             <button class="btn-small" onclick="commune()">Commune at Temple</button>
         </div>
         <div class="domain-display">
@@ -1377,9 +1384,12 @@ function modifyHealth(amount) {
         }
     }
     
+    if (character.currentHealth === character.maxHealth) {
+        character.tempHealth++;
+    }
     character.currentHealth =  Math.min(character.maxHealth, character.currentHealth + amount);
     if (character.currentHealth <= 0) {
-        alert('Character is at 0 HP or less! Do a dying roll in the Combat tab.');
+        newAlert('Character is at 0 HP or less! Do a dying roll in the Combat tab.');
     }
     updateDisplay();
     saveCharacter();
@@ -1396,7 +1406,7 @@ function fullHeal() {
 function useMedicine() {
     const medIdx = character.items.findIndex(i => i.name.toLowerCase().includes('medicine'));
     if (medIdx === -1) {
-        alert('No medicine in inventory!');
+        newAlert('No medicine in inventory!');
         return;
     }
     modifyHealth(1);
@@ -1414,11 +1424,11 @@ function addItem() {
     const backpackItems = character.items.filter(i => i.location === 'backpack').length;
     
     if (location === 'belt' && beltItems >= 2) {
-        alert('Belt can only hold 2 items!');
+        newAlert('Belt can only hold 2 items!');
         return;
     }
     if (location === 'backpack' && backpackItems >= 6) {
-        alert('Backpack can only hold 6 items!');
+        newAlert('Backpack can only hold 6 items!');
         return;
     }
     
@@ -1438,6 +1448,13 @@ function addXP(amount) {
     character.xp += amount;
     updateDisplay();
     saveCharacter();
+}
+
+function increaseStat(statName) {
+    character[statName]++;
+    updateDisplay();
+    saveCharacter();
+    closeDialog();
 }
 
 function checkLevelUp() {
@@ -1463,7 +1480,16 @@ function checkLevelUp() {
             gain += '\n⭐ Choose an Archetype Feature!';
         }
         
-        alert(`Level Up! ${oldLevel} → ${newLevel} (${ranks[newLevel-1]})\nYou gain: ${gain}`);
+        let lvlupMsg = `${oldLevel} → ${newLevel} (${ranks[newLevel-1]})<br>You gain: ${gain}`;
+
+        if (newLevel % 2 === 0) {
+            lvlupMsg += `<br>Choose an ability to increase
+            <div class="dialog-buttons"><button onclick="increaseStat('str')">+1 STR</button><button onclick="increaseStat('dex')">+1 DEX</button><button onclick="increaseStat('wil')">+1 WIL</button></div>`;
+        } else {
+            lvlupMsg += `<div class="dialog-buttons"><button onclick="closeDialog()">OK</div>`
+        }
+
+        createDialog("LEVEL UP!", lvlupMsg);
         
         character.maxHealth = 6 + character.str;
     }
@@ -1697,7 +1723,7 @@ function selectFeature(action) {
     character.featureFlags[action] = true;
     updateDisplay();
     saveCharacter();
-    alert(`Feature acquired: ${feature.name}`);
+    newAlert(`Feature acquired: ${feature.name}`);
 }
 
 // ============ FEATURE DIALOGS ============
@@ -1893,6 +1919,10 @@ function createDialog(title, content) {
     return overlay;
 }
 
+function newAlert(text) {
+    createDialog("🛈", `${text}<div class="dialog-buttons"><button onclick="closeDialog()">OK</button></div>`);
+}
+
 function closeDialog() {
     const dialog = document.getElementById('dialog-overlay');
     if (dialog) dialog.remove();
@@ -1903,33 +1933,23 @@ function randomizeDialogSelect(selectId, options) {
 }
 
 // ============ DISCIPLE FUNCTIONS ============
-function usePrayer() {
-    if (character.prayers <= 0) {
-        alert('No prayers remaining! Commune at your temple to restore.');
-        return;
-    }
-    character.prayers--;
-    updateDisplay();
-    saveCharacter();
-    logCombat('Used a prayer');
-}
 
 function commune() {
     if (character.archetype !== 'disciple') {
-        alert('Only Disciples can commune at temples!');
+        newAlert('Only Disciples can commune at temples!');
         return;
     }
     
     character.prayers = character.maxPrayers;
     updateDisplay();
     saveCharacter();
-    alert('Communed at temple - Prayers restored!');
+    newAlert('Communed at temple - Prayers restored!');
     logCombat('Communed at temple - Prayers restored');
 }
 
 function activateMiracle(miracleName) {
     if (character.prayers <= 0) {
-        alert('No prayers remaining!');
+        newAlert('No prayers remaining!');
         return;
     }
     
@@ -1982,13 +2002,13 @@ function activateMiracle(miracleName) {
     updateDisplay();
     saveCharacter();
     logCombat(`Miracle: ${effect}`);
-    alert(effect);
+    newAlert(effect);
 }
 
 // ============ MAGE RITUAL SYSTEM ============
 function conductRitual() {
     if (character.archetype !== 'mage') {
-        alert('Only Mages can conduct rituals!');
+        newAlert('Only Mages can conduct rituals!');
         return;
     }
     
@@ -2240,7 +2260,7 @@ function completeRitual() {
     ritualState.active = false;
     updateDisplay();
     saveCharacter();
-    alert('Ritual complete! Spells memorized and essence restored.');
+    newAlert('Ritual complete! Spells memorized and essence restored.');
     logCombat('Conducted ritual - spells and essence refreshed');
 }
 
@@ -2313,13 +2333,6 @@ function updateArchetypeOptions() {
                 ${TABLES.paths.map(p => `<option value="${p}">${p}</option>`).join('')}
             </select>
             <button class="btn-small" onclick="document.getElementById('vagabond-path').value=pick(TABLES.paths)">🎲</button>
-            <div class="path-descriptions">
-                <p><strong>Briarborn:</strong> tracking, foraging, survival, wilderness, nature</p>
-                <p><strong>Fingersmith:</strong> tinkering, crafting, picking locks or pockets</p>
-                <p><strong>Roofrunner:</strong> climbing, leaping, balancing, scaling, crawling</p>
-                <p><strong>Shadowjack:</strong> moving silently, hiding in shadows, sneaking</p>
-                <p><strong>Truthweaver:</strong> convincing, commanding, manipulating, demanding</p>
-            </div>
         `;
     }
 }
@@ -2364,7 +2377,7 @@ function randomBackground() {
 function createCharacter() {
     const name = document.getElementById('char-name').value.trim();
     if (!name) {
-        alert('Please enter a character name!');
+        newAlert('Please enter a character name!');
         return;
     }
     
@@ -2480,7 +2493,7 @@ function createCharacter() {
     updateDisplay();
     saveCharacter();
     showTab('character');
-    alert('Character created successfully!');
+    newAlert('Character created successfully!');
 }
 
 // ============ SPELLS ============
@@ -2551,12 +2564,12 @@ function addSpellToCharacter(name, desc, effect = '') {
     character.spells.push(spell);
     updateDisplay();
     saveCharacter();
-    alert('Spell added!');
+    newAlert('Spell added!');
 }
 
 function castSpell(index) {
     if (character.essence <= 0) {
-        alert('No essence remaining! Conduct a ritual to restore.');
+        newAlert('No essence remaining! Conduct a ritual to restore.');
         return;
     }
     
@@ -2688,7 +2701,7 @@ function calculateDamage() {
 
 function useRiposte() {
     logCombat('⚔️ RIPOSTE! Making immediate counter-attack!');
-    alert('Riposte activated! Make your counter-attack now.');
+    newAlert('Riposte activated! Make your counter-attack now.');
 }
 
 function rollInitiative() {
@@ -2876,10 +2889,8 @@ function applyScarResult(keptDice, excessDamage) {
             const abilities = ['str', 'dex', 'wil'];
             const reduced = pick(abilities);
             character[reduced]--;
-            alert(`Broken! ${reduced.toUpperCase()} reduced by 1.`);
         } else if (scarDie === 3) {
             character.maxHealth--;
-            alert('Maimed! Max Health reduced by 1.');
         } else if (scarDie === 5) {
             const mutation = pick(TABLES.mutations);
             scar = `Twisted: Mutation: ${mutation}`;
@@ -2891,6 +2902,15 @@ function applyScarResult(keptDice, excessDamage) {
         logCombat(`Scar rolled: ${scar}`);
         character.scars.push(scar);
         character.currentHealth = 1;
+        html += `
+            <div class="outcome scar" style="color: yellow;">
+                <strong>RESULT: 1-6 (SCAR)</strong>
+                <p>Your current Health is set to <strong>1</strong>.</p>
+                <div class="scar-roll" style="padding: 5px; border-radius: 4px;">
+                    <span>Scar Roll Result: ${scarDie}</span><br>
+                    NEW SCAR! ${scar}
+                </div>
+            </div>`;
     }
 
     resultDiv.innerHTML = html;
@@ -3042,10 +3062,10 @@ function awardSessionXP() {
     const xp = checks.length;
     if (xp > 0) {
         addXP(xp);
-        alert(`Awarded ${xp} XP!`);
+        newAlert(`Awarded ${xp} XP!`);
         checks.forEach(c => c.checked = false);
     } else {
-        alert('No XP to award - check the boxes for "yes" answers first!');
+        newAlert('No XP to award - check the boxes for "yes" answers first!');
     }
 }
 
@@ -3118,7 +3138,7 @@ function deleteCharacter() {
             experimentSpell: null, keptSpells: [], tempHealth: 0
         };
         updateDisplay();
-        alert('Character deleted.');
+        newAlert('Character deleted.');
     }
 }
 
@@ -3163,6 +3183,12 @@ function initDropdowns() {
     populateSelect('create-goal', TABLES.goals);
     populateSelect('create-relationship', TABLES.relationships);
     populateDropdown('create-background', TABLES.backgrounds);
+    const hash = window.location.href.split('#')[1];
+    if (hash === undefined) {
+        showTab('character');
+    } else {
+        showTab(hash);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', initDropdowns);
